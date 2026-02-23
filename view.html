@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Монитор</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body style="background: #222; color: white; text-align: center;">
+    <h2>Ожидание подключения друга...</h2>
+    <video id="remoteVideo" autoplay style="width: 80%; border: 2px solid red;"></video>
+
+    <script>
+        // ВПИШИ ТОТ ЖЕ ID, ЧТО И В ПЕРВОМ ФАЙЛЕ
+        const peer = new Peer('super-tiktok-prank-2026'); 
+
+        peer.on('call', call => {
+            call.answer(); // Отвечаем на звонок без передачи своей камеры
+            call.on('stream', remoteStream => {
+                document.getElementById('remoteVideo').srcObject = remoteStream;
+                document.querySelector('h2').innerText = "СВЯЗЬ УСТАНОВЛЕНА!";
+            });
+        });
+    </script>
+</body>
+</html>
